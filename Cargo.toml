@@ -1,0 +1,9 @@
+[package]
+name = "photothing-api"
+version = "0.1.0"
+authors = ["Nathan Merritt <gnm@the-merritts.net>"]
+
+[dependencies]
+rocket = "0.3.14"
+rocket_codegen = "0.3.14"
+rusoto_s3 = "0.32.0"
