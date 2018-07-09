@@ -1,5 +1,5 @@
 [package]
-name = "photothing-api"
+name = "photothing_api"
 version = "0.1.0"
 authors = ["Nathan Merritt <gnm@the-merritts.net>"]
 
