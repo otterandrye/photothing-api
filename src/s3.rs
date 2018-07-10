@@ -49,3 +49,52 @@ pub fn sign_upload(s3: &S3Access, _directory: &str, req: UploadRequest) -> Uploa
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
     UploadResponse { url: url }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rusoto_core::credential::StaticProvider;
+    use reqwest::{StatusCode, Client};
+
+    #[test]
+    fn upload_unauthorized() {
+        let creds = StaticProvider::new_minimal(String::from("foo"), String::from("baz"))
+            .credentials().wait().expect("couldn't make static creds");
+        let bucket = String::from("photothing-heroku-dev");
+        let access = S3Access { bucket, creds, region: Region::UsEast1 };
+        let req = UploadRequest {
+            filename: String::from(""), file_type: String::from("")
+        };
+
+        let url = sign_upload(&access, "automation", req).url;
+        assert!(url.starts_with("https://"));
+
+        let client = Client::new();
+        let res = client.put(&url)
+            .body("some content")
+            .send()
+            .expect("request failed");
+        assert_eq!(res.status(), StatusCode::Forbidden);
+    }
+
+    #[test]
+    fn upload_integration_test() {
+        let creds = EnvironmentProvider.credentials().wait()
+            .expect("couldn't build AWS credentials");
+        let bucket = String::from("photothing-heroku-dev");
+        let access = S3Access { bucket, creds, region: Region::UsEast1 };
+        let req = UploadRequest {
+            filename: String::from("upload.txt"), file_type: String::from("text/plain")
+        };
+
+        let url = sign_upload(&access, "automation", req).url;
+        assert!(url.starts_with("https://"));
+
+        let client = Client::new();
+        let res = client.put(&url)
+            .body("foobizbaz")
+            .send()
+            .expect("request failed");
+        assert_eq!(res.status(), StatusCode::Ok);
+    }
+}

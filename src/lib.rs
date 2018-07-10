@@ -9,6 +9,9 @@ extern crate rusoto_core;
 extern crate rusoto_s3;
 extern crate futures;
 
+#[cfg(test)]
+extern crate reqwest;
+
 mod s3;
 
 use rocket::fairing::AdHoc;
@@ -66,7 +69,7 @@ mod test {
     }
 
     #[test]
-    fn upload_missing_field() {
+    fn upload_endpoint_missing_field() {
         let client = client();
         let response = client.post("/api/upload")
             .header(ContentType::JSON)
@@ -76,7 +79,7 @@ mod test {
     }
 
     #[test]
-    fn test_upload() {
+    fn upload_endpoint() {
         let client = client();
         let response = client.post("/api/upload")
             .header(ContentType::JSON)
