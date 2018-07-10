@@ -50,14 +50,10 @@ pub fn rocket() -> rocket::Rocket {
 #[cfg(test)]
 mod test {
     use super::rocket;
-    use std::env;
     use rocket::local::Client;
     use rocket::http::{ContentType, Status};
 
     fn client() -> Client {
-        env::set_var("ROCKET_S3_BUCKET_NAME", "foo");
-        env::set_var("AWS_ACCESS_KEY_ID", "no");
-        env::set_var("AWS_SECRET_ACCESS_KEY", "nope");
         Client::new(rocket()).expect("valid rocket instance")
     }
 
