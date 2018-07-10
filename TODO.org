@@ -9,3 +9,6 @@
 ** api keys?
 * API endpoints
 ** DONE sign-upload from howto
+* configuration
+** app-host env on API
+** api-host env on app

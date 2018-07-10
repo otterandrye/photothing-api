@@ -1,2 +1,2 @@
-web: ./target/release/photothing_api
+web: ROCKET_PORT=$PORT ./target/release/photothing_api
 
