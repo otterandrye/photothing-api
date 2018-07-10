@@ -7,9 +7,5 @@
 * auth
 ** users CRUD
 ** api keys?
-* AWS
-** https://github.com/rusoto/rusoto
-** figure out s3 bucket layout
-** environment vars for keys/secrets
 * API endpoints
-** sign-upload from howto
+** DONE sign-upload from howto
