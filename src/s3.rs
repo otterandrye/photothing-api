@@ -1,4 +1,3 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use futures::Future;
 use rusoto_core::{ProvideAwsCredentials, Region};
 use rusoto_core::credential::{AwsCredentials, EnvironmentProvider};
@@ -31,19 +30,11 @@ pub struct UploadResponse {
     url: String
 }
 
-fn expiration_epoch(timer: u64) -> u64 {
-    let start = SystemTime::now();
-    let since_the_epoch = start.duration_since(UNIX_EPOCH).expect("Time went backwards");
-    since_the_epoch.as_secs() + timer
-}
-
-pub fn sign_upload(s3: &S3Access, _directory: &str, req: UploadRequest) -> UploadResponse {
+pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> UploadResponse {
     let put_req = PutObjectRequest {
         bucket: s3.bucket.clone(),
-        key: req.filename.clone(), // TODO: use the directory here
+        key: format!("{}/{}", directory, req.filename.clone()),
         content_type: Some(req.file_type.clone()),
-        // TODO: expires?
-        acl: Some(String::from("public-read")),
         ..Default::default()
     };
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
@@ -74,7 +65,7 @@ mod test {
             .body("some content")
             .send()
             .expect("request failed");
-        assert_eq!(res.status(), StatusCode::Forbidden);
+        assert_eq!(res.status(), StatusCode::Forbidden, "unathorized request didn't fail");
     }
 
     #[test]
@@ -95,6 +86,6 @@ mod test {
             .body("foobizbaz")
             .send()
             .expect("request failed");
-        assert_eq!(res.status(), StatusCode::Ok);
+        assert_eq!(res.status(), StatusCode::Ok, "upload request got 200 status");
     }
 }
