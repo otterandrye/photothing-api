@@ -86,14 +86,16 @@ mod test {
             .expect("couldn't build AWS credentials");
         let bucket = String::from("photothing-heroku-dev");
         let access = S3Access { bucket, creds, region: Region::UsEast1 };
+        let suffix: u8 = rand::random();
+        let filename = format!("upload-{}.txt", suffix);
         let req = UploadRequest {
-            filename: String::from("upload.txt"), file_type: String::from("text/plain")
+            filename: filename.clone(), file_type: String::from("text/plain")
         };
 
         let response = sign_upload(&access, "automation", req);
         let url = response.url;
         assert!(url.starts_with("https://"));
-        assert_eq!(response.filename, "upload.txt");
+        assert_eq!(response.filename, filename);
         assert_eq!(response.directory, "automation");
 
         // make sure we can upload content to the returned presigned url
