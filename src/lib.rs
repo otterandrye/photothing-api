@@ -11,6 +11,8 @@ extern crate futures;
 
 #[cfg(test)]
 extern crate reqwest;
+#[cfg(test)]
+extern crate rand;
 
 mod s3;
 

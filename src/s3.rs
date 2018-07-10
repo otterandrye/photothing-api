@@ -27,7 +27,10 @@ pub struct UploadRequest {
 
 #[derive(Serialize, Deserialize)]
 pub struct UploadResponse {
-    url: String
+    url: String,
+    directory: String,
+    filename: String,
+    get_url: String,
 }
 
 pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> UploadResponse {
@@ -38,12 +41,21 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> Upload
         ..Default::default()
     };
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
-    UploadResponse { url: url }
+
+    // TODO: point this at the CDN rather than the dev s3 bucket
+    let get_url = format!("http://{}.s3-website-{}.amazonaws.com/{}/{}", s3.bucket, s3.region.name(), directory, req.filename);
+    UploadResponse {
+        url,
+        get_url,
+        directory: directory.to_owned(),
+        filename: req.filename.clone()
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use rand;
     use rusoto_core::credential::StaticProvider;
     use reqwest::{StatusCode, Client};
 
@@ -78,14 +90,25 @@ mod test {
             filename: String::from("upload.txt"), file_type: String::from("text/plain")
         };
 
-        let url = sign_upload(&access, "automation", req).url;
+        let response = sign_upload(&access, "automation", req);
+        let url = response.url;
         assert!(url.starts_with("https://"));
+        assert_eq!(response.filename, "upload.txt");
+        assert_eq!(response.directory, "automation");
 
+        // make sure we can upload content to the returned presigned url
+        let content: i64 = rand::random();
+        let body = format!("foobizbaz={}", content);
         let client = Client::new();
         let res = client.put(&url)
-            .body("foobizbaz")
+            .body(body.clone())
             .send()
             .expect("request failed");
         assert_eq!(res.status(), StatusCode::Ok, "upload request got 200 status");
+
+        // and that we can fetch it back using the get_url
+        let mut get = client.get(&response.get_url).send().expect("request failed");
+        assert_eq!(get.status(), StatusCode::Ok, "got uploaded content");
+        assert_eq!(get.text().expect("no text"), body, "got correct content back");
     }
 }
