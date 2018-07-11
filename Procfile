@@ -1,3 +1,3 @@
-release: env && bash ./utils/pre_release.sh
+release: ./target/release/diesel migration run
 web: ROCKET_PORT=$PORT ./target/release/photothing_api
 
