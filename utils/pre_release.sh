@@ -1,7 +1,11 @@
 #!/bin/sh
 
-echo "env inside release script"
-env
+BUILD_DIR=${1:-}
+CACHE_DIR=${2:-}
+
+echo "args:" 
+echo $@
+echo ""
 
 # cargo might not be on the path on the dyno, try and add it
 if ! [[ $(type -P cargo) ]]; then
