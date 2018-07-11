@@ -4,7 +4,12 @@
 
 ## running
 
-`heroku local`
+```
+cargo install diesel_cli --no-default-features --features postgres
+cargo build
+diesel run migrations
+heroku local
+```
 
 ## testing
 
