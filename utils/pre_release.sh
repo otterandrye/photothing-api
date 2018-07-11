@@ -1,11 +1,13 @@
 #!/bin/sh
 
-BUILD_DIR=${1:-}
-CACHE_DIR=${2:-}
-
 echo "args:" 
 echo $@
-echo ""
+echo "env"
+env
+
+BP_DIR=$(cd $(dirname ${0:-}); cd ..; pwd)
+echo "bp dir: $BP_DIR"
+source "$BP_DIR/export"
 
 # cargo might not be on the path on the dyno, try and add it
 if ! [[ $(type -P cargo) ]]; then
