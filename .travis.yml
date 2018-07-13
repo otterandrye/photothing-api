@@ -14,12 +14,12 @@ addons:
     - postgresql-client-10
 
 before_script:
-  - psql -c 'create database travis_ci_test;' -U postgres
+  - sudo -u postgres psql -c 'create database travis_ci_test;' -U postgres
   - cargo install diesel_cli --no-default-features --features postgres
   - diesel migration run
 
 after_script:
-  - psql -c 'drop database travis_ci_test;' -U postgres
+  - sudo -u postgres psql -c 'drop database travis_ci_test;' -U postgres
 
 env:
   global:
