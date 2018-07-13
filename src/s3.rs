@@ -55,6 +55,7 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> Upload
 #[cfg(test)]
 mod test {
     use super::*;
+    use dotenv;
     use rand;
     use rusoto_core::credential::StaticProvider;
     use reqwest::{StatusCode, Client};
@@ -82,6 +83,7 @@ mod test {
 
     #[test]
     fn upload_integration_test() {
+        dotenv::dotenv().ok();        
         let creds = EnvironmentProvider.credentials().wait()
             .expect("couldn't build AWS credentials");
         let bucket = String::from("photothing-heroku-dev");

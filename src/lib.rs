@@ -1,6 +1,13 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
+extern crate bcrypt;
+extern crate chrono;
+#[macro_use] extern crate diesel;
+extern crate dotenv;
+#[macro_use] extern crate log;
+extern crate mailchecker;
+extern crate r2d2;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate rocket_cors;
@@ -14,79 +21,7 @@ extern crate reqwest;
 #[cfg(test)]
 extern crate rand;
 
+mod auth;
+mod db;
 mod s3;
-
-use rocket::fairing::AdHoc;
-use rocket::State;
-use rocket::http::Method;
-use rocket_contrib::Json;
-use rocket_cors::{AllowedOrigins, AllowedHeaders};
-use s3::{S3Access, UploadRequest, UploadResponse};
-
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, rocket!"
-}
-
-#[post("/upload", data = "<req>")]
-fn sign_upload(s3: State<S3Access>, req: Json<UploadRequest>) -> Json<UploadResponse> {
-    Json(s3::sign_upload(s3.inner(), "TODO", req.into_inner()))
-}
-
-pub fn rocket() -> rocket::Rocket {
-    let cors = rocket_cors::Cors {
-        allowed_origins: AllowedOrigins::all(), // TODO: put into configuration
-        allowed_methods: vec![Method::Get, Method::Post].into_iter().map(From::from).collect(),
-        allowed_headers: AllowedHeaders::all(),
-        allow_credentials: true,
-        ..Default::default()
-    };
-    rocket::ignite()
-        .attach(AdHoc::on_attach(|rocket| {
-            let bucket = rocket.config().get_str("s3_bucket_name")
-                .expect("missing S3 bucket").to_owned();
-            Ok(rocket.manage(S3Access::new(bucket)))
-        }))
-        .attach(cors)
-        .mount("/", routes![index])
-        .mount("/api", routes![sign_upload])
-}
-
-#[cfg(test)]
-mod test {
-    use super::rocket;
-    use rocket::local::Client;
-    use rocket::http::{ContentType, Status};
-
-    fn client() -> Client {
-        Client::new(rocket()).expect("valid rocket instance")
-    }
-
-    #[test]
-    fn hello_world() {
-        let client = client();
-        let mut response = client.get("/").dispatch();
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.body_string(), Some("Hello, rocket!".into()));
-    }
-
-    #[test]
-    fn upload_endpoint_missing_field() {
-        let client = client();
-        let response = client.post("/api/upload")
-            .header(ContentType::JSON)
-            .body(r#"{ "filename": "foo" }"#) // file_type missing
-            .dispatch();
-        assert_eq!(response.status(), Status::BadRequest);
-    }
-
-    #[test]
-    fn upload_endpoint() {
-        let client = client();
-        let response = client.post("/api/upload")
-            .header(ContentType::JSON)
-            .body(r#"{ "filename": "foo", "file_type": "bar" }"#)
-            .dispatch();
-        assert_eq!(response.status(), Status::Ok);
-    }
-}
+pub mod web;
