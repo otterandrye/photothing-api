@@ -38,7 +38,7 @@ impl User {
 pub struct NewUser {
     // TODO: stronger types here, hoist the validation
     pub email: String,
-    password: String,
+    pub password: String,
     name: Option<String>,
 }
 
@@ -46,7 +46,7 @@ static PW_LENGTH_ERROR: &str = "Passwords must be 70 characters or less";
 static EMAIL_ERROR: &str = "The provided email address is invalid";
 
 impl NewUser {
-    fn validate(&self) -> Result<(), &'static str> {
+    pub fn validate(&self) -> Result<(), &'static str> {
         if self.password.len() >= 70 {
             return Err(PW_LENGTH_ERROR);
         } else if !mailchecker::is_valid(&self.email) {
@@ -57,7 +57,6 @@ impl NewUser {
 
     pub fn insert(self, db: &PgConnection) -> Result<User, Error> {
         use db::schema::users::dsl::*;
-        self.validate();
         let created = diesel::insert_into(users).values(&self).get_result(db)?;
         Ok(created)
     }

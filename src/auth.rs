@@ -21,8 +21,19 @@ pub struct UserCreateResponse {
 }
 
 // Create a new user account and set the login cookie
-pub fn create_user(new_user: NewUser, db: &DbConn, mut cookies: Cookies) -> UserCreateResponse {
+pub fn create_user(mut new_user: NewUser, db: &DbConn, mut cookies: Cookies) -> UserCreateResponse {
     let email = new_user.email.clone();
+
+    // check validation here since it's annoying to from the insert function
+    match new_user.validate() {
+        Err(e) => return UserCreateResponse { email, error: Some(e.to_string()) },
+        _ => {},
+    }
+    let hashed = hash_password(&new_user.password);
+    match hashed {
+        Ok(p) => new_user.password = p,
+        Err(e) => return UserCreateResponse { email, error: Some(format!("Invalid password: {:?}", e)) },
+    }
 
     match new_user.insert(db) {
         Ok(user) => {
