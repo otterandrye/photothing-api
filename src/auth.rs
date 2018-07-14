@@ -1,17 +1,33 @@
-use bcrypt::{DEFAULT_COST, hash, verify, BcryptResult};
+use bcrypt::verify;
+use mailchecker;
 use rocket::Outcome;
 use rocket::http::{Cookie, Cookies, Status};
 use rocket::request::{self, Request, FromRequest};
 
 use db::DbConn;
-use db::models::{User, NewUser};
+use db::models::{NewUser, User};
+use util::hash_password;
 
 static USER_COOKIE: &str = "u";
+
+static PW_LENGTH_ERROR: &str = "Passwords must be 70 characters or less";
+static EMAIL_ERROR: &str = "The provided email address is invalid";
 
 #[derive(Deserialize, Debug)]
 pub struct UserLogin {
     email: String,
     password: String,
+}
+
+impl UserLogin {
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.password.len() >= 70 {
+            return Err(PW_LENGTH_ERROR);
+        } else if !mailchecker::is_valid(&self.email) {
+            return Err(EMAIL_ERROR);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -21,21 +37,20 @@ pub struct UserCreateResponse {
 }
 
 // Create a new user account and set the login cookie
-pub fn create_user(mut new_user: NewUser, db: &DbConn, mut cookies: Cookies) -> UserCreateResponse {
+pub fn create_user(new_user: UserLogin, db: &DbConn, mut cookies: Cookies) -> UserCreateResponse {
     let email = new_user.email.clone();
 
-    // check validation here since it's annoying to from the insert function
-    match new_user.validate() {
-        Err(e) => return UserCreateResponse { email, error: Some(e.to_string()) },
-        _ => {},
+    if let Err(e) = new_user.validate() {
+        return UserCreateResponse { email, error: Some(e.to_string()) };
     }
     let hashed = hash_password(&new_user.password);
-    match hashed {
-        Ok(p) => new_user.password = p,
-        Err(e) => return UserCreateResponse { email, error: Some(format!("Invalid password: {:?}", e)) },
+    if let Err(e) = hashed {
+        return UserCreateResponse { email, error: Some(e) };
     }
+    // Validation and password hashing completed successfully, insert the new user
+    let user = NewUser::new(email.clone(), hashed.unwrap());
 
-    match new_user.insert(db) {
+    match user.insert(db) {
         Ok(user) => {
             cookies.add_private(Cookie::new(USER_COOKIE, format!("{}", user.email)));
             UserCreateResponse { email: user.email, error: None }
@@ -103,21 +118,19 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     }
 }
 
-fn hash_password(password: &str) -> BcryptResult<String> {
-    hash(password, DEFAULT_COST)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn password_hashing() {
-        // letters, numbers, special chars & extended ascii
-        let pw = "åî>@%åÄSt»Æ·wj³´m~ðjC½µæGjq6?ï";
-        let hashed = hash_password(pw).expect("hashing failed");
+    fn user_form_validation() {
+        let part = String::from("abcdefghijklmnopqrstuvwyzx");
+        let pw = format!("{}{}{}{}{}{}{}", part, part, part, part, part, part, part);
+        assert!(pw.len() > 70);
+        let long_pw = UserLogin { email: String::from("a@g.com"), password: pw };
+        assert_eq!(long_pw.validate(), Err(PW_LENGTH_ERROR));
 
-        assert!(verify(pw, &hashed).expect("hash failed"), "hashes match");
-        assert!(!verify("moo moo", &hashed).expect("hash failed"), "diff strings dont match");
+        let bad_email = UserLogin { email: String::from("not an email"), password: String::from("pw") };
+        assert_eq!(bad_email.validate(), Err(EMAIL_ERROR));
     }
 }

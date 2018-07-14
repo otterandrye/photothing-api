@@ -7,7 +7,7 @@ use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn};
-use db::models::{User, NewUser};
+use db::models::User;
 use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
 use auth::{self, UserLogin, UserCreateResponse};
 
@@ -26,7 +26,7 @@ fn logout(_user: User, cookies: Cookies) -> String {
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, cookies: Cookies, user: Json<NewUser>) -> Json<UserCreateResponse> {
+fn register(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Json<UserCreateResponse> {
     Json(auth::create_user(user.into_inner(), &db, cookies))
 }
 
@@ -54,35 +54,4 @@ pub fn rocket() -> Rocket {
         .manage(init_db_pool())
         .attach(cors)
         .mount("/api", routes![login, register, sign_user_upload])
-}
-
-#[cfg(test)]
-mod test {
-    use super::rocket;
-    use rocket::local::Client;
-    use rocket::http::{ContentType, Status};
-
-    fn client() -> Client {
-        Client::new(rocket()).expect("valid rocket instance")
-    }
-
-    #[test]
-    fn upload_endpoint_missing_field() {
-        let client = client();
-        let response = client.post("/api/upload")
-            .header(ContentType::JSON)
-            .body(r#"{ "filename": "foo" }"#) // file_type missing
-            .dispatch();
-        assert_eq!(response.status(), Status::BadRequest);
-    }
-
-    #[test]
-    fn upload_endpoint() {
-        let client = client();
-        let response = client.post("/api/upload")
-            .header(ContentType::JSON)
-            .body(r#"{ "filename": "foo", "file_type": "bar" }"#)
-            .dispatch();
-        assert_eq!(response.status(), Status::Ok);
-    }
 }

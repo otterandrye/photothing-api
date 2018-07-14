@@ -3,11 +3,11 @@ use diesel;
 use diesel::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
-use mailchecker;
 
 use db::schema::users;
+use ::util::{HashedPassword, uuid};
 
-#[derive(Queryable, Insertable)]
+#[derive(Queryable)]
 pub struct User {
     pub id: i32,
     pub email: String,
@@ -33,48 +33,30 @@ impl User {
     }
 }
 
-#[derive(Insertable, Deserialize, Debug)]
+#[derive(Insertable)]
 #[table_name="users"]
 pub struct NewUser {
-    // TODO: stronger types here, hoist the validation
-    pub email: String,
-    pub password: String,
+    email: String,
+    uuid: String,
+    password: String,
     name: Option<String>,
+    subscription_expires: Option<NaiveDate>,
 }
 
-static PW_LENGTH_ERROR: &str = "Passwords must be 70 characters or less";
-static EMAIL_ERROR: &str = "The provided email address is invalid";
-
 impl NewUser {
-    pub fn validate(&self) -> Result<(), &'static str> {
-        if self.password.len() >= 70 {
-            return Err(PW_LENGTH_ERROR);
-        } else if !mailchecker::is_valid(&self.email) {
-            return Err(EMAIL_ERROR);
+    pub fn new(email: String, pw: HashedPassword) -> NewUser {
+        NewUser {
+            email,
+            uuid: uuid().0,
+            password: pw.0,
+            name: None,
+            subscription_expires: None,
         }
-        Ok(())
     }
 
     pub fn insert(self, db: &PgConnection) -> Result<User, Error> {
         use db::schema::users::dsl::*;
         let created = diesel::insert_into(users).values(&self).get_result(db)?;
         Ok(created)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn user_form_validation() {
-        let part = String::from("abcdefghijklmnopqrstuvwyzx");
-        let pw = format!("{}{}{}{}{}{}{}", part, part, part, part, part, part, part);
-        assert!(pw.len() > 70);
-        let long_pw = NewUser { email: String::from("a@g.com"), password: pw, name: None };
-        assert_eq!(long_pw.validate(), Err(PW_LENGTH_ERROR));
-
-        let bad_email = NewUser { email: String::from("not an email"), password: String::from("pw"), name: None};
-        assert_eq!(bad_email.validate(), Err(EMAIL_ERROR));
     }
 }

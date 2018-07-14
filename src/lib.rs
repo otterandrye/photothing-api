@@ -24,4 +24,5 @@ extern crate rand;
 mod auth;
 mod db;
 mod s3;
+mod util;
 pub mod web;
