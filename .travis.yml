@@ -16,7 +16,7 @@ addons:
 before_script:
   - sudo -u postgres psql -c "create database travis_ci_test;" -U postgres
   - sudo -u postgres psql -c "alter user postgres password '1234';" -U postgres
-  - cargo install diesel_cli --no-default-features --features postgres
+  - cargo install diesel_cli --no-default-features --features postgres || echo "already installed" 
   - diesel migration run
 
 after_script:
