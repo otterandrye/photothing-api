@@ -2,7 +2,9 @@ use dotenv;
 
 use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
-use rocket::http::{Cookies, Method};
+use rocket::http::{Status, Cookies, Method};
+use rocket::response::Failure;
+use rocket::response::status::Custom;
 use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
@@ -12,22 +14,27 @@ use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
 use auth::{self, UserLogin, UserCreateResponse};
 
 #[post("/login", data = "<user>")]
-fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> String {
+fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, Custom<String>> {
     match auth::login_user(user.into_inner(), &db, cookies) {
-        Some(user) => format!("Hello, {}", user.email),
-        None => String::from("Username or password is invalid"),
+        Some(user) => Ok(format!("Hello, {}", user.email)),
+        None => Err(Custom(Status::Unauthorized, String::from("Username or password is invalid"))),
     }
 }
 
 #[post("/logout")]
 fn logout(_user: User, cookies: Cookies) -> String {
     auth::logout(cookies);
-    String::from("Ok")
+    String::from(r#"{"logout":"Ok"}"#)
+}
+
+#[post("/logout", rank = 2)]
+fn logout_no_user() -> Failure {
+    Failure(Status::Unauthorized)
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Json<UserCreateResponse> {
-    Json(auth::create_user(user.into_inner(), &db, cookies))
+fn register(db: DbConn, user: Json<UserLogin>) -> Json<UserCreateResponse> {
+    Json(auth::create_user(user.into_inner(), &db))
 }
 
 #[post("/upload", data = "<req>")]
@@ -53,5 +60,36 @@ pub fn rocket() -> Rocket {
         }))
         .manage(init_db_pool())
         .attach(cors)
-        .mount("/api", routes![login, register, sign_user_upload])
+        .mount("/api", routes![login, logout, logout_no_user, register, sign_user_upload])
+}
+
+#[cfg(test)]
+mod test {
+    use super::rocket;
+    use rocket::local::Client;
+    use rocket::http::{ContentType, Status};
+
+    fn client() -> Client {
+        Client::new(rocket()).expect("valid rocket instance")
+    }
+
+    #[test]
+    fn logout_no_user() {
+        let client = client();
+        let response = client.post("/api/logout")
+            .header(ContentType::JSON)
+            .body("{}".to_string())
+            .dispatch();
+         assert_eq!(response.status(), Status::Unauthorized);
+    }
+
+    #[test]
+    fn upload_no_user() {
+        let client = client();
+        let response = client.post("/api/upload")
+            .header(ContentType::JSON)
+            .body(format!("{}", json!({"filename": "foo", "file_type": "bar"})))
+            .dispatch();
+         assert_eq!(response.status(), Status::NotFound);
+    }
 }

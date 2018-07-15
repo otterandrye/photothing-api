@@ -83,7 +83,7 @@ mod test {
 
     #[test]
     fn upload_integration_test() {
-        dotenv::dotenv().ok();        
+        dotenv::dotenv().ok();
         let creds = EnvironmentProvider.credentials().wait()
             .expect("couldn't build AWS credentials");
         let bucket = String::from("photothing-heroku-dev");

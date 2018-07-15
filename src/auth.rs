@@ -10,8 +10,9 @@ use util::hash_password;
 
 static USER_COOKIE: &str = "u";
 
-static PW_LENGTH_ERROR: &str = "Passwords must be 70 characters or less";
-static EMAIL_ERROR: &str = "The provided email address is invalid";
+// These errors are API-facing, return tokens rather than english
+static PW_LENGTH_ERROR: &str = "PW_TOO_LONG_70_MAX";
+static EMAIL_ERROR: &str = "INVALID_EMAIL";
 
 #[derive(Deserialize, Debug)]
 pub struct UserLogin {
@@ -37,7 +38,7 @@ pub struct UserCreateResponse {
 }
 
 // Create a new user account and set the login cookie
-pub fn create_user(new_user: UserLogin, db: &DbConn, mut cookies: Cookies) -> UserCreateResponse {
+pub fn create_user(new_user: UserLogin, db: &DbConn) -> UserCreateResponse {
     let email = new_user.email.clone();
 
     if let Err(e) = new_user.validate() {
@@ -50,21 +51,22 @@ pub fn create_user(new_user: UserLogin, db: &DbConn, mut cookies: Cookies) -> Us
     // Validation and password hashing completed successfully, insert the new user
     let user = NewUser::new(email.clone(), hashed.unwrap());
 
+    // Always say "registration accepted, please log in now" regardless of status
+    // e.g. if there's an error because an email address is already in use don't tell the user
     match user.insert(db) {
         Ok(user) => {
-            cookies.add_private(Cookie::new(USER_COOKIE, format!("{}", user.email)));
             UserCreateResponse { email: user.email, error: None }
         },
         Err(e) => {
             error!("Error inserting new user ({}): {}", email, e);
-            UserCreateResponse { email, error: Some(format!("{:?}", e)) }
+            UserCreateResponse { email, error: None }
         }
     }
 }
 
 // Check the provided email/password against the database
 //  - Set a private cookie on success
-//  - different returns for db and auth errors
+//  - don't send the user any database errors, could leak sensitive info
 pub fn login_user(creds: UserLogin, db: &DbConn, mut cookies: Cookies) -> Option<User> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
