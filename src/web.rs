@@ -90,6 +90,6 @@ mod test {
             .header(ContentType::JSON)
             .body(format!("{}", json!({"filename": "foo", "file_type": "bar"})))
             .dispatch();
-         assert_eq!(response.status(), Status::NotFound);
+         assert_eq!(response.status(), Status::Unauthorized);
     }
 }
