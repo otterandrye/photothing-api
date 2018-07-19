@@ -1,4 +1,5 @@
 use bcrypt::{DEFAULT_COST, hash};
+use uuid::Uuid as GenUuid;
 
 // Containers to keep track of all the strings we have running around
 pub struct HashedPassword(pub String);
@@ -13,7 +14,8 @@ pub fn hash_password(password: &str) -> Result<HashedPassword, String> {
 }
 
 pub fn uuid() -> Uuid {
-    Uuid (String::from("TODO"))
+    let id = GenUuid::new_v4();
+    Uuid (id.simple().to_string())
 }
 
 #[cfg(test)]
@@ -29,5 +31,12 @@ mod test {
 
         assert!(verify(pw, &hashed.0).expect("hash failed"), "hashes match");
         assert!(!verify("moo moo", &hashed.0).expect("hash failed"), "diff strings dont match");
+    }
+
+    #[test]
+    fn gen_uuids() {
+        let v4 = uuid();
+        assert_eq!(v4.0.find("-"), None);
+        assert_eq!(v4.0.len(), 32);
     }
 }

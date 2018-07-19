@@ -15,6 +15,7 @@ extern crate rocket_cors;
 #[macro_use] extern crate serde_derive;
 extern crate rusoto_core;
 extern crate rusoto_s3;
+extern crate uuid;
 
 #[cfg(test)]
 #[macro_use] extern crate serde_json;
