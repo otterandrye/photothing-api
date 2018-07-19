@@ -1,4 +1,4 @@
-pub mod models;
+pub mod user;
 mod schema;
 
 use std::env;

@@ -5,8 +5,10 @@ use rocket::http::{Cookie, Cookies, Status};
 use rocket::request::{self, Request, FromRequest};
 
 use db::DbConn;
-use db::models::{NewUser, User};
+use db::user::NewUser;
 use util::hash_password;
+
+pub use db::user::User;
 
 static USER_COOKIE: &str = "u";
 

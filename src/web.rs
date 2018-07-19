@@ -9,9 +9,8 @@ use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn};
-use db::models::User;
 use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
-use auth::{self, UserLogin, UserCreateResponse};
+use auth::{self, User, UserLogin, UserCreateResponse};
 
 #[post("/login", data = "<user>")]
 fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, Custom<String>> {
