@@ -1,4 +1,13 @@
 table! {
+    photo_attrs (photo_id, key) {
+        photo_id -> Int4,
+        key -> Varchar,
+        value -> Varchar,
+        updated_at -> Timestamp,
+    }
+}
+
+table! {
     photos (id) {
         id -> Int4,
         uuid -> Varchar,
@@ -21,9 +30,11 @@ table! {
     }
 }
 
+joinable!(photo_attrs -> photos (photo_id));
 joinable!(photos -> users (owner));
 
 allow_tables_to_appear_in_same_query!(
+    photo_attrs,
     photos,
     users,
 );
