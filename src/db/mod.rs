@@ -1,3 +1,4 @@
+pub mod photo;
 pub mod user;
 mod schema;
 

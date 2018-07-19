@@ -1,0 +1,8 @@
+CREATE TABLE photos (
+  id SERIAL PRIMARY KEY
+  , uuid VARCHAR(32) UNIQUE NOT NULL
+  , owner INTEGER NOT NULL REFERENCES users
+  , present BOOL
+  , created_at TIMESTAMP NOT NULL DEFAULT NOW()
+  , updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
