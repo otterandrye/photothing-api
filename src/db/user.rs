@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use diesel;
 use diesel::PgConnection;
 use diesel::result::Error;
@@ -15,6 +15,7 @@ pub struct User {
     pub password: String,
     pub name: Option<String>,
     pub subscription_expires: Option<NaiveDate>,
+    pub updated_at: NaiveDateTime,
 }
 
 impl User {

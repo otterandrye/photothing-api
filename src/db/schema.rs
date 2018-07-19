@@ -6,5 +6,6 @@ table! {
         password -> Varchar,
         name -> Nullable<Varchar>,
         subscription_expires -> Nullable<Date>,
+        updated_at -> Timestamp,
     }
 }
