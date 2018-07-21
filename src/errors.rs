@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::io::Cursor;
+
 use diesel::result::Error;
 use rocket::{Response, Request};
 use rocket::http::{ContentType, Status};
@@ -27,6 +29,16 @@ impl ApiError {
             Err(dbe) => Err(ApiError {
                 status: Status::InternalServerError,
                 message: format!("{:?}", dbe),
+            })
+        }
+    }
+
+    pub fn bad_request<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
+        match e {
+            Ok(t) => Ok(t),
+            Err(d) => Err(ApiError {
+                status: Status::BadRequest,
+                message: format!("{:?}", d),
             })
         }
     }
