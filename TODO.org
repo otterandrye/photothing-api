@@ -1,9 +1,3 @@
-* heroku buildpack?
-** https://github.com/emk/heroku-buildpack-rust
-* database
-** diesel, r2d2
-** migrations
-** dev/prod configuration
 * auth
 ** users CRUD
 ** api keys?

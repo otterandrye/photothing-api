@@ -8,14 +8,15 @@ pub struct S3Access {
     bucket: String,
     region: Region,
     creds: AwsCredentials,
+    cdn_url: String,
 }
 
 impl S3Access {
-    pub fn new(bucket: String) -> S3Access {
+    pub fn new(bucket: String, cdn_url: String) -> S3Access {
         let region = Region::default(); // reads from environment var
         let creds = EnvironmentProvider.credentials().wait()
             .expect("couldn't build AWS credentials");
-        S3Access { bucket, region, creds }
+        S3Access { bucket, region, creds, cdn_url }
     }
 }
 
@@ -42,8 +43,7 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> Upload
     };
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
 
-    // TODO: point this at the CDN rather than the dev s3 bucket
-    let get_url = format!("http://{}.s3-website-{}.amazonaws.com/{}/{}", s3.bucket, s3.region.name(), directory, req.filename);
+    let get_url = format!("https://{}/{}/{}", &s3.cdn_url, directory, req.filename);
     UploadResponse {
         url,
         get_url,
@@ -69,13 +69,15 @@ mod test {
     use rand;
     use rusoto_core::credential::StaticProvider;
     use reqwest::{StatusCode, Client};
+    use std::env;
 
     #[test]
     fn upload_unauthorized() {
         let creds = StaticProvider::new_minimal(String::from("foo"), String::from("baz"))
             .credentials().wait().expect("couldn't make static creds");
         let bucket = String::from("photothing-heroku-dev");
-        let access = S3Access { bucket, creds, region: Region::UsEast1 };
+        let cdn_url = "foo.com".to_string();
+        let access = S3Access { bucket, creds, region: Region::UsEast1, cdn_url };
         let req = UploadRequest {
             filename: String::from(""), file_type: String::from("")
         };
@@ -97,7 +99,8 @@ mod test {
         let creds = EnvironmentProvider.credentials().wait()
             .expect("couldn't build AWS credentials");
         let bucket = String::from("photothing-heroku-dev");
-        let access = S3Access { bucket, creds, region: Region::UsEast1 };
+        let cdn_url = env::var("ROCKET_CDN_URL").expect("missing cdn url");
+        let access = S3Access { bucket, creds, region: Region::UsEast1, cdn_url };
         let suffix: u8 = rand::random();
         let filename = format!("upload-{}.txt", suffix);
         let req = UploadRequest {
@@ -107,6 +110,7 @@ mod test {
         let response = sign_upload(&access, "automation", req);
         let url = response.url;
         assert!(url.starts_with("https://"));
+        assert!(response.get_url.find(&access.cdn_url).is_some());
         assert_eq!(response.filename, filename);
         assert_eq!(response.directory, "automation");
 

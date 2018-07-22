@@ -78,7 +78,7 @@ mod test {
 
     fn setup() -> (User, S3Access, DbConn) {
         dotenv::dotenv().ok();
-        let s3 = S3Access::new("fake_bucket".into());
+        let s3 = S3Access::new("fake_bucket".into(), "foo.com".into());
         let pool = init_db_pool();
         let db = DbConn(pool.get().expect("couldn't connect to db"));
         let user = NewUser::new(String::from("e"), HashedPassword(String::from("")));
