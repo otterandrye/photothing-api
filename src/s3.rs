@@ -21,7 +21,7 @@ impl S3Access {
 
 #[derive(Serialize, Deserialize)]
 pub struct UploadRequest {
-    filename: String,
+    pub filename: String,
     file_type: String
 }
 
@@ -49,6 +49,16 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> Upload
         get_url,
         directory: directory.to_owned(),
         filename: req.filename.clone()
+    }
+}
+
+#[cfg(test)]
+impl UploadRequest {
+    pub fn fake() -> UploadRequest {
+        UploadRequest {
+            filename: String::from("f"),
+            file_type: String::from("t")
+        }
     }
 }
 

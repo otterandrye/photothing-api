@@ -26,6 +26,7 @@ extern crate rand;
 mod auth;
 mod db;
 mod errors;
+mod photos;
 mod s3;
 mod util;
 pub mod web;

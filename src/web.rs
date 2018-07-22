@@ -9,8 +9,10 @@ use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn};
-use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
+use errors::ApiError;
+use s3::{S3Access, UploadRequest};
 use auth::{self, User, UserLogin, UserCreateResponse};
+use photos;
 
 #[post("/login", data = "<user>")]
 fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, Custom<String>> {
@@ -37,8 +39,17 @@ fn register(db: DbConn, user: Json<UserLogin>) -> Json<UserCreateResponse> {
 }
 
 #[post("/upload", data = "<req>")]
-fn sign_user_upload(user: User, s3: State<S3Access>, req: Json<UploadRequest>) -> Json<UploadResponse> {
-    Json(sign_upload(s3.inner(), &user.uuid, req.into_inner()))
+fn sign_user_upload(user: User, s3: State<S3Access>, db: DbConn, req: Json<UploadRequest>)
+    -> Result<Json<photos::PendingUpload>, ApiError>
+{
+    let photo = photos::create_photo(&user, &db, s3.inner(), req.into_inner())?;
+    Ok(Json(photo))
+}
+
+#[get("/photos")]
+fn get_photos(user: User, db: DbConn) -> Result<Json<Vec<photos::Photo>>, ApiError> {
+    let photos = photos::user_photos(&user, &db)?;
+    Ok(Json(photos))
 }
 
 // Main entry that creates the web application, connects to the database and binds the web routes

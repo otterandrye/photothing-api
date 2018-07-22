@@ -9,7 +9,8 @@ use db::user::User;
 use ::util::uuid;
 
 // Main Photo object, keeps track of whether the file exists on S3 and who uploaded it
-#[derive(Queryable)]
+#[derive(Queryable, Associations, Identifiable)]
+#[belongs_to(User, foreign_key = "owner")]
 pub struct Photo {
     pub id: i32,
     pub uuid: String,
@@ -17,6 +18,16 @@ pub struct Photo {
     pub present: Option<bool>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+}
+
+impl Photo {
+    pub fn by_user(db: &PgConnection, user: &User) -> Result<Vec<(Photo, Vec<PhotoAttr>)>, Error> {
+        let photos = Photo::belonging_to(user).load::<Photo>(db)?;
+        let attributes = PhotoAttr::belonging_to(&photos)
+            .load(db)?
+            .grouped_by(&photos);
+        Ok(photos.into_iter().zip(attributes).collect::<Vec<_>>())
+    }
 }
 
 #[derive(Insertable)]
@@ -27,7 +38,7 @@ pub struct NewPhoto {
 }
 
 impl NewPhoto {
-    pub fn new(owner: User) -> NewPhoto {
+    pub fn new(owner: &User) -> NewPhoto {
         NewPhoto {
             owner: owner.id,
             uuid: uuid().0,
@@ -42,7 +53,9 @@ impl NewPhoto {
 }
 
 // Attributes object for storing metadata about a photo
-#[derive(Queryable)]
+#[derive(Queryable, Associations, Identifiable)]
+#[belongs_to(Photo)]
+#[primary_key(photo_id, key)]
 pub struct PhotoAttr {
     photo_id: i32,
     pub key: String,
@@ -50,12 +63,11 @@ pub struct PhotoAttr {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Insertable, Debug, PartialEq)]
-#[table_name="photo_attrs"]
-pub struct NewPhotoAttr {
-    photo_id: i32,
+// Validation for an attribute's string key & value
+#[derive(Debug, PartialEq)]
+pub struct AttributeKeyValue {
     key: String,
-    value: String
+    value: String,
 }
 
 static ERR_TAG_LEN_30: &'static str = "TAG_TOO_LONG_MAX_30";
@@ -63,10 +75,10 @@ static ERR_TAG_EMPTY: &'static str = "TAG_EMPTY";
 static ERR_VALUE_LEN_100: &'static str = "VALUE_TOO_LONG_MAX_100";
 static ERR_VALUE_EMPTY: &'static str = "VALUE_EMPTY";
 
-impl NewPhotoAttr {
+impl AttributeKeyValue {
     // This function verifies the database constraints on the attributes table for you
     // NB: keys are downcased
-    pub fn new(photo: &Photo, key: &str, value: &str) -> Result<NewPhotoAttr, &'static str> {
+    pub fn new(key: &str, value: &str) -> Result<AttributeKeyValue, &'static str> {
         if key.is_empty() {
             return Err(ERR_TAG_EMPTY);
         }
@@ -79,9 +91,26 @@ impl NewPhotoAttr {
         if value.len() > 100 {
             return Err(ERR_VALUE_LEN_100);
         }
-        Ok(NewPhotoAttr {
-            photo_id: photo.id, key: key.to_lowercase().into(), value: value.into()
+        Ok(AttributeKeyValue {
+            key: key.to_lowercase().into(),
+            value: value.into()
         })
+    }
+}
+
+#[derive(Insertable, Debug)]
+#[table_name="photo_attrs"]
+pub struct NewPhotoAttr {
+    photo_id: i32,
+    key: String,
+    value: String
+}
+
+impl NewPhotoAttr {
+    pub fn new(photo: &Photo, value: AttributeKeyValue) -> NewPhotoAttr {
+        NewPhotoAttr {
+            photo_id: photo.id, key: value.key, value: value.value
+        }
     }
 
     pub fn insert(self, db: &PgConnection) -> Result<PhotoAttr, Error> {
@@ -109,11 +138,12 @@ mod test {
     #[test]
     fn new_photo_attr() {
         let photo = photo();
-        match NewPhotoAttr::new(&photo, "FOO", "BAR") {
+        match AttributeKeyValue::new("FOO", "BAR") {
             Ok(attr) => {
                 assert_eq!(attr.key, "foo");
                 assert_eq!(attr.value, "BAR");
-                assert_eq!(attr.photo_id, photo.id);
+                let new = NewPhotoAttr::new(&photo, attr);
+                assert_eq!(new.photo_id, photo.id);
             },
             Err(e) => assert!(false, format!("Got error making attr: {}", e))
         }
@@ -121,12 +151,11 @@ mod test {
 
     #[test]
     fn attr_db_constraints() {
-        let photo = photo();
-        assert_eq!(NewPhotoAttr::new(&photo, "", "foo"), Err(ERR_TAG_EMPTY));
-        assert_eq!(NewPhotoAttr::new(&photo, "asdflkjghasdfljasflkjaslfdjaslfdjalsdfj", "foo"),
+        assert_eq!(AttributeKeyValue::new("", "foo"), Err(ERR_TAG_EMPTY));
+        assert_eq!(AttributeKeyValue::new("asdflkjghasdfljasflkjaslfdjaslfdjalsdfj", "foo"),
                    Err(ERR_TAG_LEN_30));
-        assert_eq!(NewPhotoAttr::new(&photo, "f", ""), Err(ERR_VALUE_EMPTY));
-        assert_eq!(NewPhotoAttr::new(&photo, "f", "fooagwiuerpqoiweu¨zoiueraux,n,mnwqueihaohsdkjaklsdfjaklsjfklasjfklasjdflkajsfkljaslfdjasldfjalsjdflajsdfl;ajsdfl;ajdsf;lajsdfkla"),
+        assert_eq!(AttributeKeyValue::new("f", ""), Err(ERR_VALUE_EMPTY));
+        assert_eq!(AttributeKeyValue::new("f", "fooagwiuerpqoiweu¨zoiueraux,n,mnwqueihaohsdkjaklsdfjaklsjfklasjfklasjdflkajsfkljaslfdjasldfjalsjdflajsdfl;ajsdfl;ajdsf;lajsdfkla"),
                    Err(ERR_VALUE_LEN_100));
     }
 }

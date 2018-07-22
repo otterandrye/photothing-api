@@ -7,7 +7,7 @@ use diesel::prelude::*;
 use db::schema::users;
 use ::util::{HashedPassword, uuid};
 
-#[derive(Queryable)]
+#[derive(Queryable, Identifiable)]
 pub struct User {
     pub id: i32,
     pub email: String,
