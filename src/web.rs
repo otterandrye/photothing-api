@@ -68,7 +68,13 @@ pub fn rocket() -> Rocket {
                 .expect("missing S3 bucket").to_owned();
             let cdn_url = rocket.config().get_str("cdn_url")
                 .expect("missing CDN url").to_owned();
-            Ok(rocket.manage(S3Access::new(bucket, cdn_url)))
+            let cdn_prefix = rocket.config().get_str("cdn_prefix")
+                .expect("missing CDN prefix").to_owned();
+            let cdn_prefix = match cdn_prefix {
+                _ if cdn_prefix.len() == 0 => None,
+                _ => Some(cdn_prefix),
+            };
+            Ok(rocket.manage(S3Access::new(bucket, cdn_url, cdn_prefix)))
         }))
         .manage(init_db_pool())
         .attach(cors)

@@ -1,8 +1,12 @@
 * auth
+** 2fa
+** reCaptcha on registration
 ** users CRUD
 ** api keys?
 * API endpoints
 ** DONE sign-upload from howto
+** pagination on photo endpoint
 * configuration
+** DONE dev/prod CDN prefixes
 ** app-host env on API
 ** api-host env on app

@@ -1,6 +1,10 @@
 [development]
 secret_key = "y776UJ3OBPATyMB1rag+RlKQqb9Ezd8lRky6O3noF0I="
+cdn_prefix = "dev"
 
 [staging]
 secret_key = "7bU2X1BgdUTlwZxIh8PRwGwAz3puYZarrgespKAMJRk="
+cdn_prefix = "stg"
 
+[production]
+cdn_prefix = ""
