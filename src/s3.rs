@@ -102,6 +102,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn upload_integration_test() {
         dotenv::dotenv().ok();
         let creds = EnvironmentProvider.credentials().wait()

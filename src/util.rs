@@ -24,6 +24,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn password_hashing() {
         // letters, numbers, special chars & extended ascii
         let pw = "åî>@%åÄSt»Æ·wj³´m~ðjC½µæGjq6?ï";
