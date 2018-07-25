@@ -64,9 +64,7 @@ pub fn create_user(new_user: UserLogin, db: &DbConn) -> UserCreateResponse {
     // Always say "registration accepted, please log in now" regardless of status
     // e.g. if there's an error because an email address is already in use don't tell the user
     match user.insert(db) {
-        Ok(user) => {
-            UserCreateResponse { email: user.email, error: None }
-        },
+        Ok(user) => UserCreateResponse { email: user.email, error: None },
         Err(e) => {
             error!("Error inserting new user ({}): {}", email, e);
             UserCreateResponse { email, error: None }
@@ -77,7 +75,7 @@ pub fn create_user(new_user: UserLogin, db: &DbConn) -> UserCreateResponse {
 // Check the provided email/password against the database
 //  - Set a private cookie on success
 //  - don't send the user any database errors, could leak sensitive info
-pub fn login_user(creds: UserLogin, db: &DbConn, mut cookies: Cookies) -> Option<User> {
+pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<User> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
             error!("Error fetching user ({:?}): {}", creds, e);
@@ -86,7 +84,7 @@ pub fn login_user(creds: UserLogin, db: &DbConn, mut cookies: Cookies) -> Option
         Ok(Some(user)) => {
             match verify(&creds.password, &user.password) {
                 Ok(true) => {
-                    cookies.add_private(Cookie::new(USER_COOKIE, format!("{}", user.email)));
+                    login(cookies, &user);
                     Some(user)
                 },
                 _ => None,
@@ -99,6 +97,10 @@ pub fn login_user(creds: UserLogin, db: &DbConn, mut cookies: Cookies) -> Option
 
 pub fn logout(mut cookies: Cookies) {
     cookies.remove_private(Cookie::named(USER_COOKIE));
+}
+
+fn login(mut cookies: Cookies, user: &User) {
+    cookies.add_private(Cookie::new(USER_COOKIE, user.email.clone()));
 }
 
 // Check the private cookies on the request to see if there's a stored user id. If there is,
