@@ -1,8 +1,9 @@
 * auth
 ** 2fa
 ** reCaptcha on registration
-** users CRUD
-** api keys?
+** Admin API w/ information about site
+** DONE users CRUD
+** DONE password strength check
 * API endpoints
 ** DONE sign-upload from howto
 ** DONE put upload behind subscription gate
