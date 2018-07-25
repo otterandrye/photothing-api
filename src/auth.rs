@@ -4,6 +4,7 @@ use rocket::Outcome;
 use rocket::http::{Cookie, Cookies, Status};
 use rocket::request::{self, Request, FromRequest};
 use chrono::prelude::*;
+use zxcvbn::zxcvbn as check_password;
 
 use db::DbConn;
 use db::user::NewUser;
@@ -14,8 +15,8 @@ pub use db::user::User;
 static USER_COOKIE: &str = "u";
 
 // These errors are API-facing, return tokens rather than english
-static PW_LENGTH_ERROR: &str = "PW_TOO_LONG_70_MAX";
 static PW_SHORT_ERROR: &str = "PW_TOO_SHORT_8_MIN";
+static PW_SIMPLE: &str = "PW_TOO_SIMPLE";
 static EMAIL_ERROR: &str = "INVALID_EMAIL";
 
 #[derive(Deserialize, Debug)]
@@ -26,11 +27,14 @@ pub struct UserLogin {
 
 impl UserLogin {
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.password.len() >= 70 {
-            return Err(PW_LENGTH_ERROR);
-        } else if self.password.len() < 8 {
+        if self.password.len() < 8 {
             return Err(PW_SHORT_ERROR);
-        } else if !mailchecker::is_valid(&self.email) {
+        } else if let Ok(entropy) = check_password(&self.password, &vec![&self.email[..]][..]) {
+            if entropy.score < 3 {
+                return Err(PW_SIMPLE);
+            }
+        }
+        if !mailchecker::is_valid(&self.email) {
             return Err(EMAIL_ERROR);
         }
         Ok(())
@@ -159,17 +163,17 @@ mod test {
 
     #[test]
     fn user_form_validation() {
-        let part = String::from("abcdefghijklmnopqrstuvwyzx");
-        let pw = format!("{}{}{}{}{}{}{}", part, part, part, part, part, part, part);
-        assert!(pw.len() > 70);
-        let long_pw = UserLogin { email: String::from("a@g.com"), password: pw };
-        assert_eq!(long_pw.validate(), Err(PW_LENGTH_ERROR));
-
         let short_pw = UserLogin { email: String::from("a@g.com"), password: String::from("hi") };
         assert_eq!(short_pw.validate(), Err(PW_SHORT_ERROR));
 
+        let simple_pw = UserLogin { email: String::from("a@g.com"), password: String::from("12345678") };
+        assert_eq!(simple_pw.validate(), Err(PW_SIMPLE));
+
         let bad_email = UserLogin { email: String::from("not an email"), password: String::from("minimum eight chars") };
         assert_eq!(bad_email.validate(), Err(EMAIL_ERROR));
+
+        let ascii_pw = UserLogin { email: String::from("foo@gmail.com"), password: String::from("hàµyKµ3øã^^³½ä}A5öý9×¿aûiëP}·") };
+        assert!(ascii_pw.validate().is_ok());
     }
 
     #[test]
