@@ -4,7 +4,6 @@ use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
 use rocket::http::{Status, Cookies, Method};
 use rocket::response::Failure;
-use rocket::response::status::Custom;
 use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
@@ -15,10 +14,10 @@ use auth::{self, Subscriber, User, UserLogin, UserCreateResponse};
 use photos;
 
 #[post("/login", data = "<user>")]
-fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, Custom<String>> {
+fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, ApiError> {
     match auth::login_user(user.into_inner(), &db, cookies) {
         Some(user) => Ok(format!("Hello, {}", user.email)),
-        None => Err(Custom(Status::Unauthorized, String::from("Username or password is invalid"))),
+        None => Err(ApiError::unauthorized()),
     }
 }
 
@@ -34,8 +33,9 @@ fn logout_no_user() -> Failure {
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, user: Json<UserLogin>) -> Json<UserCreateResponse> {
-    Json(auth::create_user(user.into_inner(), &db))
+fn register(db: DbConn, user: Json<UserLogin>) -> Result<Json<UserCreateResponse>, ApiError> {
+    let user = auth::create_user(user.into_inner(), &db)?;
+    Ok(Json(user))
 }
 
 #[post("/upload", data = "<req>")]

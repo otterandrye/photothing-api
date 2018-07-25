@@ -54,6 +54,10 @@ fn user_registration_login() {
     let res = logout();
     assert_eq!(res.status(), Status::Unauthorized, "logout: no user registered");
 
+    let invalid_email = json!({ "email": "foozip", "password": "someTiNg12##!" });
+    let res = register(&invalid_email);
+    assert_eq!(res.status(), Status::BadRequest, "register w/ invalid email");
+
     // register a new user
     let res = register(&creds);
     assert_eq!(res.status(), Status::Ok);
@@ -74,7 +78,7 @@ fn user_registration_login() {
     assert_eq!(res.status(), Status::Ok);
     assert_user_cookie(&res, false);
     assert_eq!(res.body_string().expect("missing body on error response"),
-               r#"{"email":"nathan@chemist.com","error":null}"#);
+               r#"{"email":"nathan@chemist.com"}"#);
 
     // finally, check that an authenticated request works
     let res =  client.get("/api/photos")

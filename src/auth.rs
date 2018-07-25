@@ -8,6 +8,7 @@ use zxcvbn::zxcvbn as check_password;
 
 use db::DbConn;
 use db::user::NewUser;
+use errors::ApiError;
 use util::hash_password;
 
 pub use db::user::User;
@@ -44,30 +45,25 @@ impl UserLogin {
 #[derive(Serialize, Debug)]
 pub struct UserCreateResponse {
     email: String,
-    error: Option<String>,
 }
 
 // Create a new user account and set the login cookie
-pub fn create_user(new_user: UserLogin, db: &DbConn) -> UserCreateResponse {
+pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserCreateResponse, ApiError> {
     let email = new_user.email.clone();
 
-    if let Err(e) = new_user.validate() {
-        return UserCreateResponse { email, error: Some(e.to_string()) };
-    }
-    let hashed = hash_password(&new_user.password);
-    if let Err(e) = hashed {
-        return UserCreateResponse { email, error: Some(e) };
-    }
+    ApiError::bad_request(new_user.validate())?;
+    let hashed = ApiError::bad_request(hash_password(&new_user.password))?;
+
     // Validation and password hashing completed successfully, insert the new user
-    let user = NewUser::new(email.clone(), hashed.unwrap());
+    let user = NewUser::new(email.clone(), hashed);
 
     // Always say "registration accepted, please log in now" regardless of status
     // e.g. if there's an error because an email address is already in use don't tell the user
     match user.insert(db) {
-        Ok(user) => UserCreateResponse { email: user.email, error: None },
+        Ok(user) => Ok(UserCreateResponse { email: user.email }),
         Err(e) => {
             error!("Error inserting new user ({}): {}", email, e);
-            UserCreateResponse { email, error: None }
+            Ok(UserCreateResponse { email })
         }
     }
 }

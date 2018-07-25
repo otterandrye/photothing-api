@@ -42,4 +42,11 @@ impl ApiError {
             })
         }
     }
+
+    pub fn unauthorized() -> ApiError {
+        ApiError {
+            status: Status::Unauthorized,
+            message: "Username or password is invalid".to_string(),
+        }
+    }
 }
