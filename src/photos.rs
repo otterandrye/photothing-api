@@ -73,7 +73,6 @@ mod test {
     use db::{DbConn, init_db_pool};
     use db::user::NewUser;
     use s3::UploadRequest;
-    use util::HashedPassword;
     use super::*;
 
     fn setup() -> (User, S3Access, DbConn) {
@@ -81,7 +80,7 @@ mod test {
         let s3 = S3Access::new("fake_bucket".into(), "foo.com".into(), None);
         let pool = init_db_pool();
         let db = DbConn(pool.get().expect("couldn't connect to db"));
-        let user = NewUser::new(String::from("e"), HashedPassword(String::from("")));
+        let user = NewUser::fake("e");
         let user = user.insert(&db).expect("couldn't make user");
         (user, s3, db)
     }

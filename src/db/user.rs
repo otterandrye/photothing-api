@@ -7,7 +7,7 @@ use diesel::prelude::*;
 use db::schema::users;
 use ::util::{HashedPassword, uuid};
 
-#[derive(Queryable, Identifiable)]
+#[derive(Queryable, Identifiable, Clone)]
 pub struct User {
     pub id: i32,
     pub email: String,
@@ -70,11 +70,17 @@ impl NewUser {
 }
 
 #[cfg(test)]
+impl NewUser {
+    pub fn fake(email: &str) -> NewUser {
+        NewUser::new(String::from(email), HashedPassword(String::from("foobar")))
+    }
+}
+
+#[cfg(test)]
 mod test {
     use dotenv;
 
     use db::{DbConn, init_db_pool};
-    use util::HashedPassword;
     use super::*;
 
     #[test]
@@ -82,7 +88,7 @@ mod test {
         dotenv::dotenv().ok();
         let pool = init_db_pool();
         let db = DbConn(pool.get().expect("couldn't connect to db"));
-        let user = NewUser::new(String::from("foo"), HashedPassword(String::from("foobar")));
+        let user = NewUser::fake("foo");
         let user = user.insert(&db).expect("couldn't make user");
         assert!(user.subscription_expires.is_none(), "new user has subscription by default");
         assert_eq!(user.email, "foo");
@@ -90,5 +96,8 @@ mod test {
         let date = NaiveDate::from_ymd(2015, 3, 14);
         let updated = user.edit_subscription(&db, Some(date)).expect("update error'd");
         assert_eq!(Some(date), updated.subscription_expires, "date update failed");
+
+        let back_to_null = updated.edit_subscription(&db, None).expect("back to None failed");
+        assert!(back_to_null.subscription_expires.is_none(), "date update failed");
     }
 }

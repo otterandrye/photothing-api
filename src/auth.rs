@@ -3,6 +3,7 @@ use mailchecker;
 use rocket::Outcome;
 use rocket::http::{Cookie, Cookies, Status};
 use rocket::request::{self, Request, FromRequest};
+use chrono::prelude::*;
 
 use db::DbConn;
 use db::user::NewUser;
@@ -122,8 +123,35 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
     }
 }
 
+// A subscriber is a user with a non-null subscription expiry date that is after today
+pub struct Subscriber(pub User);
+
+impl<'a, 'r> FromRequest<'a, 'r> for Subscriber {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Subscriber, ()> {
+        let user = request.guard::<User>()?;
+        Subscriber::from_user(user)
+    }
+}
+
+impl Subscriber {
+    fn from_user(user: User) -> request::Outcome<Subscriber, ()> {
+        let utc: DateTime<Utc> = Utc::now();
+        let today = utc.num_days_from_ce();
+        match user.subscription_expires {
+            Some(expiration) if expiration.num_days_from_ce() >= today =>
+                Outcome::Success(Subscriber(user)),
+            _ => Outcome::Failure((Status::Forbidden, ())),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use dotenv;
+
+    use db::{DbConn, init_db_pool};
     use super::*;
 
     #[test]
@@ -136,5 +164,28 @@ mod test {
 
         let bad_email = UserLogin { email: String::from("not an email"), password: String::from("pw") };
         assert_eq!(bad_email.validate(), Err(EMAIL_ERROR));
+    }
+
+    #[test]
+    fn subscription_check() {
+        dotenv::dotenv().ok();
+        let pool = init_db_pool();
+        let db = DbConn(pool.get().expect("couldn't connect to db"));
+        let email = "subs";
+        let user = NewUser::fake(email);
+        let user = user.insert(&db).expect("couldn't make user");
+
+        let null_column = Subscriber::from_user(user.clone());
+        assert!(null_column.is_failure());
+
+        let long_ago = NaiveDate::from_ymd(2015, 3, 14);
+        let user = user.edit_subscription(&db, Some(long_ago)).expect("edit failed");
+        let expired = Subscriber::from_user(user.clone());
+        assert!(expired.is_failure());
+
+        let far_from_now = NaiveDate::from_ymd(2200, 3, 14);
+        let user = user.edit_subscription(&db, Some(far_from_now)).expect("edit failed");
+        let unexpired = Subscriber::from_user(user.clone());
+        assert!(unexpired.is_success());
     }
 }
