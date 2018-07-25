@@ -15,6 +15,7 @@ static USER_COOKIE: &str = "u";
 
 // These errors are API-facing, return tokens rather than english
 static PW_LENGTH_ERROR: &str = "PW_TOO_LONG_70_MAX";
+static PW_SHORT_ERROR: &str = "PW_TOO_SHORT_8_MIN";
 static EMAIL_ERROR: &str = "INVALID_EMAIL";
 
 #[derive(Deserialize, Debug)]
@@ -27,6 +28,8 @@ impl UserLogin {
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.password.len() >= 70 {
             return Err(PW_LENGTH_ERROR);
+        } else if self.password.len() < 8 {
+            return Err(PW_SHORT_ERROR);
         } else if !mailchecker::is_valid(&self.email) {
             return Err(EMAIL_ERROR);
         }
@@ -162,7 +165,10 @@ mod test {
         let long_pw = UserLogin { email: String::from("a@g.com"), password: pw };
         assert_eq!(long_pw.validate(), Err(PW_LENGTH_ERROR));
 
-        let bad_email = UserLogin { email: String::from("not an email"), password: String::from("pw") };
+        let short_pw = UserLogin { email: String::from("a@g.com"), password: String::from("hi") };
+        assert_eq!(short_pw.validate(), Err(PW_SHORT_ERROR));
+
+        let bad_email = UserLogin { email: String::from("not an email"), password: String::from("minimum eight chars") };
         assert_eq!(bad_email.validate(), Err(EMAIL_ERROR));
     }
 
