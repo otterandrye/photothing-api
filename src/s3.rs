@@ -36,22 +36,20 @@ pub struct UploadResponse {
 }
 
 pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> UploadResponse {
+    // we use environment prefixes to allow the CDN to route to the right s3 bucket
+    let destination = match &s3.cdn_prefix {
+        Some(prefix) => format!("{}/{}/{}", prefix, directory, req.filename),
+        _ => format!("{}/{}", directory, req.filename),
+    };
     let put_req = PutObjectRequest {
         bucket: s3.bucket.clone(),
-        key: format!("{}/{}", directory, req.filename.clone()),
+        key: destination.clone(),
         content_type: Some(req.file_type.clone()),
         ..Default::default()
     };
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
+    let get_url = format!("https://{}/{}", &s3.cdn_url, destination);
 
-    // we use environment prefixes to allow the CDN to route to the right s3 bucket
-    let get_url = match &s3.cdn_prefix {
-        Some(prefix) => {
-            println!("Used prefix");
-            format!("https://{}/{}/{}/{}", &s3.cdn_url, prefix, directory, req.filename)
-        }            ,
-        _ => format!("https://{}/{}/{}", &s3.cdn_url, directory, req.filename),
-    };
     UploadResponse {
         url,
         get_url,
@@ -129,12 +127,14 @@ mod test {
         let content: i64 = rand::random();
         let body = format!("foobizbaz={}", content);
         let client = Client::new();
+        println!("Uploading to {}", &url);
         let res = client.put(&url)
             .body(body.clone())
             .send()
             .expect("request failed");
         assert_eq!(res.status(), StatusCode::Ok, "upload request got 200 status");
 
+        println!("CDN url: {}", &response.get_url);
         // and that we can fetch it back using the get_url
         let mut get = client.get(&response.get_url).send().expect("CDN request failed");
         assert_eq!(get.status(), StatusCode::Ok, "200 getting uploaded content from CDN");
