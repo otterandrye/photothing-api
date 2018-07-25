@@ -96,7 +96,11 @@ pub fn logout(mut cookies: Cookies) {
 }
 
 fn login(mut cookies: Cookies, user: &User) {
-    cookies.add_private(Cookie::new(USER_COOKIE, user.email.clone()));
+    let login_cookie = Cookie::build(USER_COOKIE, user.email.clone())
+        .secure(false) // appears to be required to make CORS work
+        .http_only(true)
+        .finish();
+    cookies.add_private(login_cookie);
 }
 
 // Check the private cookies on the request to see if there's a stored user id. If there is,
