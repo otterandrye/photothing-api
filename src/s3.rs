@@ -35,11 +35,11 @@ pub struct UploadResponse {
     get_url: String,
 }
 
-pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest) -> UploadResponse {
+pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str) -> UploadResponse {
     // we use environment prefixes to allow the CDN to route to the right s3 bucket
     let destination = match &s3.cdn_prefix {
-        Some(prefix) => format!("{}/{}/{}", prefix, directory, req.filename),
-        _ => format!("{}/{}", directory, req.filename),
+        Some(prefix) => format!("{}/{}/{}", prefix, directory, id),
+        _ => format!("{}/{}", directory, id),
     };
     let put_req = PutObjectRequest {
         bucket: s3.bucket.clone(),
@@ -88,7 +88,7 @@ mod test {
             filename: String::from(""), file_type: String::from("")
         };
 
-        let url = sign_upload(&access, "automation", req).url;
+        let url = sign_upload(&access, "automation", req, "id").url;
         assert!(url.starts_with("https://"));
 
         let client = Client::new();
@@ -115,7 +115,7 @@ mod test {
             filename: filename.clone(), file_type: String::from("text/plain")
         };
 
-        let response = sign_upload(&access, "automation", req);
+        let response = sign_upload(&access, "automation", req, &filename);
         let url = response.url;
         assert!(url.starts_with("https://"));
         assert!(response.get_url.find(&access.cdn_url).is_some());

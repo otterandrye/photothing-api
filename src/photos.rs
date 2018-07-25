@@ -52,7 +52,7 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
         let filename_attr = filename_attr.insert(db)?;
 
         let photo = Photo::new(photo, vec![filename_attr]);
-        let upload = sign_upload(s3, &user.uuid, upload);
+        let upload = sign_upload(s3, &user.uuid, upload, &photo.uuid);
 
         Ok(PendingUpload { photo, upload })
     });
