@@ -11,7 +11,7 @@ use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 use db::{init_db_pool, DbConn};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
-use auth::{self, User, UserLogin, UserCreateResponse};
+use auth::{self, Subscriber, User, UserLogin, UserCreateResponse};
 use photos;
 
 #[post("/login", data = "<user>")]
@@ -39,9 +39,10 @@ fn register(db: DbConn, user: Json<UserLogin>) -> Json<UserCreateResponse> {
 }
 
 #[post("/upload", data = "<req>")]
-fn sign_user_upload(user: User, s3: State<S3Access>, db: DbConn, req: Json<UploadRequest>)
+fn sign_user_upload(user: Subscriber, s3: State<S3Access>, db: DbConn, req: Json<UploadRequest>)
     -> Result<Json<photos::PendingUpload>, ApiError>
 {
+    let user = user.0;
     let photo = photos::create_photo(&user, &db, s3.inner(), req.into_inner())?;
     Ok(Json(photo))
 }
@@ -78,7 +79,10 @@ pub fn rocket() -> Rocket {
         }))
         .manage(init_db_pool())
         .attach(cors)
-        .mount("/api", routes![login, logout, logout_no_user, register, sign_user_upload])
+        .mount("/api", routes![
+            login, logout, logout_no_user, register,
+            sign_user_upload, get_photos
+        ])
 }
 
 #[cfg(test)]

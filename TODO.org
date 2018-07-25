@@ -5,6 +5,7 @@
 ** api keys?
 * API endpoints
 ** DONE sign-upload from howto
+** DONE put upload behind subscription gate
 ** pagination on photo endpoint
 * configuration
 ** DONE dev/prod CDN prefixes

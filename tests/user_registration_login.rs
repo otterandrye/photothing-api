@@ -32,6 +32,7 @@ fn assert_user_cookie<'a, 'b>(res: &'a LocalResponse, expected: bool) -> Option<
 }
 
 #[test]
+#[ignore]
 fn user_registration_login() {
     let client = Client::new(photothing_api::web::rocket()).expect("rocket launched");
 
@@ -75,13 +76,19 @@ fn user_registration_login() {
     assert_eq!(res.body_string().expect("missing body on error response"),
                r#"{"email":"nathan@chemist.com","error":null}"#);
 
-    // finally, check that an upload request works
+    // finally, check that an authenticated request works
+    let res =  client.get("/api/photos")
+            .header(ContentType::JSON)
+            .cookie(login_cookie.clone())
+            .dispatch();
+    assert_eq!(res.status(), Status::Ok);
+    // and that one requiring a subscription returns Forbidden
     let res =  client.post("/api/upload")
             .header(ContentType::JSON)
             .cookie(login_cookie.clone())
             .body(format!("{}", json!({ "filename": "foo", "file_type": "jpg" })))
             .dispatch();
-    assert_eq!(res.status(), Status::Ok);
+    assert_eq!(res.status(), Status::Forbidden);
 
     // and that logout succeeds & clears the user cookie
     let res =  client.post("/api/logout")
