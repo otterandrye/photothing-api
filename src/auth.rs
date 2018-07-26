@@ -87,7 +87,11 @@ pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<Use
             }
 
         },
-        _ => None,
+        _ => {
+            // Run verify in the "email not registered" case too to prevent timing attacks
+            verify("run verify here so attackers", "can't use timing attacks against login");
+            None
+        },
     }
 }
 
