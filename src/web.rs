@@ -2,8 +2,7 @@ use dotenv;
 
 use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
-use rocket::http::{Status, Cookies, Method};
-use rocket::response::Failure;
+use rocket::http::{Cookies, Method};
 use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
@@ -25,11 +24,6 @@ fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, 
 fn logout(_user: User, cookies: Cookies) -> String {
     auth::logout(cookies);
     String::from(r#"{"logout":"Ok"}"#)
-}
-
-#[post("/logout", rank = 2)]
-fn logout_no_user() -> Failure {
-    Failure(Status::Unauthorized)
 }
 
 #[post("/register", data = "<user>")]
@@ -80,7 +74,7 @@ pub fn rocket() -> Rocket {
         .manage(init_db_pool())
         .attach(cors)
         .mount("/api", routes![
-            login, logout, logout_no_user, register,
+            login, logout, register,
             sign_user_upload, get_photos
         ])
 }

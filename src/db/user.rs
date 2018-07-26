@@ -41,6 +41,18 @@ impl User {
     }
 }
 
+#[cfg(test)]
+impl User {
+    pub fn fake() -> User {
+        User {
+            id: 1, email: String::from("foo"),
+            uuid: uuid().0, password: String::from("nope"),
+            name: None, subscription_expires: None,
+            updated_at: NaiveDateTime::from_timestamp(0, 42_000_000)
+        }
+    }
+}
+
 #[derive(Insertable)]
 #[table_name="users"]
 pub struct NewUser {

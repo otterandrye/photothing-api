@@ -14,6 +14,7 @@ use util::hash_password;
 pub use db::user::User;
 
 static USER_COOKIE: &str = "u";
+static ADMIN_PREFIX: &str = "ADMINx";
 
 // These errors are API-facing, return tokens rather than english
 static PW_SHORT_ERROR: &str = "PW_TOO_SHORT_8_MIN";
@@ -71,6 +72,7 @@ pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserCreateRespons
 // Check the provided email/password against the database
 //  - Set a private cookie on success
 //  - don't send the user any database errors, could leak sensitive info
+#[allow(unused_must_use)]
 pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<User> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
@@ -89,6 +91,7 @@ pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<Use
         },
         _ => {
             // Run verify in the "email not registered" case too to prevent timing attacks
+            // Ok that we ignore the Result
             verify("run verify here so attackers", "can't use timing attacks against login");
             None
         },
@@ -160,11 +163,31 @@ impl Subscriber {
     }
 }
 
+// Use the first characters of 'user.uuid' to identify admins
+// This should work until we decide we want more fine-grained user access levels
+pub struct Admin(User);
+
+impl<'a, 'r> FromRequest<'a, 'r> for Admin {
+    type Error = ();
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Admin, ()> {
+        let user = request.guard::<User>()?;
+        Admin::from_user(user)
+    }
+}
+
+impl Admin {
+    fn from_user(user: User) -> request::Outcome<Admin, ()> {
+        if user.uuid.starts_with(ADMIN_PREFIX) {
+            return Outcome::Success(Admin(user));
+        }
+        // 404 for any admin-specific URLs if auth fails
+        Outcome::Failure((Status::NotFound, ()))
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use dotenv;
-
-    use db::{DbConn, init_db_pool};
     use super::*;
 
     #[test]
@@ -184,6 +207,45 @@ mod test {
 
     #[test]
     fn subscription_check() {
+        let mut user = User::fake();
+
+        let null_column = Subscriber::from_user(user.clone());
+        assert!(null_column.is_failure());
+
+        let long_ago = NaiveDate::from_ymd(2015, 3, 14);
+        user.subscription_expires = Some(long_ago);
+        let expired = Subscriber::from_user(user.clone());
+        assert!(expired.is_failure());
+
+        let far_from_now = NaiveDate::from_ymd(2200, 3, 14);
+        user.subscription_expires = Some(far_from_now);
+        let unexpired = Subscriber::from_user(user.clone());
+        assert!(unexpired.is_success());
+    }
+
+    #[test]
+    fn admin_check() {
+        let mut user = User::fake();
+
+        let not_admin = Admin::from_user(user.clone());
+        assert!(not_admin.is_failure());
+
+        let admin_uuid = format!("{}{}", ADMIN_PREFIX, user.uuid);
+        user.uuid = admin_uuid[..32].to_string();
+
+        let admin = Admin::from_user(user.clone());
+        assert!(admin.is_success());
+    }
+}
+
+#[cfg(test)]
+mod functest {
+    use dotenv;
+    use db::{DbConn, init_db_pool};
+    use super::*;
+
+    #[test]
+    fn edit_subscription() {
         dotenv::dotenv().ok();
         let pool = init_db_pool();
         let db = DbConn(pool.get().expect("couldn't connect to db"));
@@ -191,17 +253,11 @@ mod test {
         let user = NewUser::fake(email);
         let user = user.insert(&db).expect("couldn't make user");
 
-        let null_column = Subscriber::from_user(user.clone());
-        assert!(null_column.is_failure());
-
         let long_ago = NaiveDate::from_ymd(2015, 3, 14);
         let user = user.edit_subscription(&db, Some(long_ago)).expect("edit failed");
-        let expired = Subscriber::from_user(user.clone());
-        assert!(expired.is_failure());
+        assert_eq!(user.subscription_expires, Some(long_ago));
 
-        let far_from_now = NaiveDate::from_ymd(2200, 3, 14);
-        let user = user.edit_subscription(&db, Some(far_from_now)).expect("edit failed");
-        let unexpired = Subscriber::from_user(user.clone());
-        assert!(unexpired.is_success());
+        let user = user.edit_subscription(&db, None).expect("edit failed");
+        assert_eq!(user.subscription_expires, None);
     }
 }
