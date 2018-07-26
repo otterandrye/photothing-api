@@ -9,13 +9,15 @@ use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 use db::{init_db_pool, DbConn};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
-use auth::{self, Subscriber, User, UserLogin, UserCreateResponse};
+use auth::{self, Subscriber, User};
 use photos;
 
 #[post("/login", data = "<user>")]
-fn login(db: DbConn, cookies: Cookies, user: Json<UserLogin>) -> Result<String, ApiError> {
+fn login(db: DbConn, cookies: Cookies, user: Json<auth::UserLogin>)
+    -> Result<Json<auth::UserCredentials>, ApiError>
+{
     match auth::login_user(user.into_inner(), &db, cookies) {
-        Some(user) => Ok(format!("Hello, {}", user.email)),
+        Some(user) => Ok(Json(user)),
         None => Err(ApiError::unauthorized()),
     }
 }
@@ -27,7 +29,7 @@ fn logout(_user: User, cookies: Cookies) -> String {
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, user: Json<UserLogin>) -> Result<Json<UserCreateResponse>, ApiError> {
+fn register(db: DbConn, user: Json<auth::UserLogin>) -> Result<Json<auth::UserCreateResponse>, ApiError> {
     let user = auth::create_user(user.into_inner(), &db)?;
     Ok(Json(user))
 }

@@ -1,11 +1,10 @@
 extern crate photothing_api;
 #[macro_use] extern crate serde_json;
-extern crate reqwest;
 extern crate rocket;
 
-//use reqwest::{StatusCode, Client};
+use serde_json::Value;
 use rocket::local::{Client, LocalResponse};
-use rocket::http::{Cookie, ContentType, Status};
+use rocket::http::{Cookie, ContentType, Header, Status};
 
 fn post<'a, 'b, 'c>(client: &'a Client, endpoint: &'b str, body: &'c serde_json::Value) -> LocalResponse<'a> {
     client.post(endpoint.to_string())
@@ -67,11 +66,34 @@ fn user_registration_login() {
     let res = login(&invalid_creds);
     assert_eq!(res.status(), Status::Unauthorized, "bad creds");
     assert_user_cookie(&res, false);
+
     // and log in
-    let res = login(&creds);
+    let mut res = login(&creds);
     assert_eq!(res.status(), Status::Ok);
+    assert_eq!(res.content_type(), Some(ContentType::JSON));
     let login_cookie = assert_user_cookie(&res, true).expect("login cookie missing");
     let login_cookie = Cookie::parse_encoded(login_cookie).expect("login cookie parsing failed");
+    let body = serde_json::from_str(&res.body_string().expect("missing body on login"))
+        .expect("body parsing failed");
+    let mut auth_header = None; // keep track of the header the server told us to use to login
+    match body {
+        Value::Object(map) => {
+            match map.get("email") {
+                Some(Value::String(email)) => assert_eq!(email, "nathan@chemist.com"),
+                _ => assert!(false, "wrong email in login response"),
+            };
+            match map.get("pt_auth") {
+                Some(Value::String(auth_value)) => assert_eq!(auth_value, login_cookie.value()),
+                _ => assert!(false, "wrong auth value in login response"),
+            };
+            match map.get("header") {
+                Some(Value::String(header)) => auth_header = Some(header.clone()),
+                _ => assert!(false, "missing auth header in login response"),
+            }
+        },
+        _ => assert!(false, "got badly formed login response body"),
+    }
+    let auth_header = auth_header.expect("didn't get auth header in login response");
 
     // if registering w/ an in-use email we shouldn't expose an error
     let mut res = register(&creds);
@@ -81,11 +103,19 @@ fn user_registration_login() {
                r#"{"email":"nathan@chemist.com"}"#);
 
     // finally, check that an authenticated request works
+    // via cookie
     let res =  client.get("/api/photos")
             .header(ContentType::JSON)
             .cookie(login_cookie.clone())
             .dispatch();
-    assert_eq!(res.status(), Status::Ok);
+    assert_eq!(res.status(), Status::Ok, "cookie auth succeeded");
+    // via header
+    let login_header = Header::new(auth_header, login_cookie.value().to_string());
+    let res =  client.get("/api/photos")
+            .header(login_header)
+            .dispatch();
+    assert_eq!(res.status(), Status::Ok, "header auth succeeded");
+
     // and that one requiring a subscription returns Forbidden
     let res =  client.post("/api/upload")
             .header(ContentType::JSON)

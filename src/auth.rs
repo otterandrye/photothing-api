@@ -14,6 +14,7 @@ use util::hash_password;
 pub use db::user::User;
 
 static USER_COOKIE: &str = "u";
+static AUTH_HEADER: &str = "X-Pt-Auth";
 static ADMIN_PREFIX: &str = "ADMINx";
 
 // These errors are API-facing, return tokens rather than english
@@ -69,11 +70,28 @@ pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserCreateRespons
     }
 }
 
+#[derive(Serialize)]
+pub struct UserCredentials {
+    email: String,
+    header: String,
+    pt_auth: String,
+}
+
+impl UserCredentials {
+    fn new(user: User, auth_token: String) -> UserCredentials {
+        UserCredentials {
+            email: user.email,
+            header: String::from(AUTH_HEADER),
+            pt_auth: auth_token,
+        }
+    }
+}
+
 // Check the provided email/password against the database
 //  - Set a private cookie on success
 //  - don't send the user any database errors, could leak sensitive info
 #[allow(unused_must_use)]
-pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<User> {
+pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<UserCredentials> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
             error!("Error fetching user ({:?}): {}", creds, e);
@@ -81,13 +99,9 @@ pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<Use
         },
         Ok(Some(user)) => {
             match verify(&creds.password, &user.password) {
-                Ok(true) => {
-                    login(cookies, &user);
-                    Some(user)
-                },
+                Ok(true) => Some(login(cookies, user)),
                 _ => None,
             }
-
         },
         _ => {
             // Run verify in the "email not registered" case too to prevent timing attacks
@@ -102,26 +116,30 @@ pub fn logout(mut cookies: Cookies) {
     cookies.remove_private(Cookie::named(USER_COOKIE));
 }
 
-fn login(mut cookies: Cookies, user: &User) {
+fn login(mut cookies: Cookies, user: User) -> UserCredentials {
     let login_cookie = Cookie::build(USER_COOKIE, user.email.clone())
         .secure(false) // appears to be required to make CORS work
         .http_only(true)
         .finish();
     cookies.add_private(login_cookie);
+    let encrypted_cookie = cookies.get(USER_COOKIE).expect("added above");
+    UserCredentials::new(user, encrypted_cookie.value().to_string())
 }
 
-// Check the private cookies on the request to see if there's a stored user id. If there is,
-// look up the user to make sure the user is still valid in the database. This will handle
-// authentication for all requests with a `User` guard
+// Check the private cookies or custom auth header on the request to see if there's a stored user
+// id. If there is, look up the user to make sure the user is still valid in the database. This
+// will handle authentication for all requests with a [`User`] guard
 impl<'a, 'r> FromRequest<'a, 'r> for User {
     type Error = ();
 
     fn from_request(request: &'a Request<'r>) -> request::Outcome<User, ()> {
-        let user_cookie = request.cookies().get_private(USER_COOKIE);
-        match user_cookie {
+        let user = User::check_headers(request)
+            .or_else(|| User::check_cookies(request));
+
+        match user {
             Some(user_email) => {
                 let db = request.guard::<DbConn>()?;
-                match User::by_email(&db, user_email.value()) {
+                match User::by_email(&db, &user_email) {
                     Ok(Some(user)) => Outcome::Success(user),
                     Ok(None) => {
                         // the user has been removed, clear the invalid cookie
@@ -129,13 +147,31 @@ impl<'a, 'r> FromRequest<'a, 'r> for User {
                         Outcome::Failure((Status::Unauthorized, ()))
                     },
                     Err(e) => {
-                        error!("Error fetching user from cookie ({}): {}", user_email, e);
+                        error!("Error fetching user from email ({}): {}", user_email, e);
                         Outcome::Failure((Status::InternalServerError, ()))
                     },
                 }
             }
             None => Outcome::Failure((Status::Unauthorized, ())),
         }
+    }
+}
+
+impl User {
+    fn check_cookies(request: &Request) -> Option<String> {
+        request.cookies()
+            .get_private(USER_COOKIE)
+            .map(|cookie| cookie.value().to_string())
+    }
+
+    fn check_headers(request: &Request) -> Option<String> {
+        // This is a bit of a hack: the encryption rocket uses is buried inside its
+        // cookie jar, so if we see an auth header we stick it into the request as a cookie
+        // so the normal mechanism can decrypt it for us. Hence 'add' instead of 'add_private'
+        if let Some(encrypted) = request.headers().get_one(AUTH_HEADER) {
+            request.cookies().add(Cookie::new(USER_COOKIE, encrypted.to_string()));
+        }
+        None
     }
 }
 
