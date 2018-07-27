@@ -90,7 +90,6 @@ impl UserCredentials {
 // Check the provided email/password against the database
 //  - Set a private cookie on success
 //  - don't send the user any database errors, could leak sensitive info
-#[allow(unused_must_use)]
 pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<UserCredentials> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
@@ -105,8 +104,7 @@ pub fn login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<Use
         },
         _ => {
             // Run verify in the "email not registered" case too to prevent timing attacks
-            // Ok that we ignore the Result
-            verify("run verify here so attackers", "can't use timing attacks against login");
+            let _ = verify("run verify here so attackers", "can't use timing attacks against login");
             None
         },
     }
