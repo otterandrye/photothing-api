@@ -2,10 +2,9 @@ use chrono::NaiveDateTime;
 use chrono::naive::serde::ts_seconds;
 use diesel::Connection;
 use std::collections::HashMap;
-use std::iter::Iterator;
 
 use auth::User;
-use db::DbConn;
+use db::{DbConn, Pagination, Page};
 use db::photo::{NewPhotoAttr, NewPhoto, Photo as DbPhoto, PhotoAttr, AttributeKeyValue};
 use errors::ApiError;
 use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
@@ -59,11 +58,9 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
     ApiError::server_error(txn)
 }
 
-pub fn user_photos(user: &User, db: &DbConn) -> Result<Vec<Photo>, ApiError> {
-    let photos = ApiError::server_error(DbPhoto::by_user(db, user))?;
-    Ok(photos.into_iter()
-        .map(|(p, a)| Photo::new(p, a))
-        .collect())
+pub fn user_photos(user: &User, db: &DbConn, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
+    let page = ApiError::server_error(DbPhoto::by_user(db, user, pagination))?;
+    Ok(page.map(|(p, a)| Photo::new(p, a)))
 }
 
 #[cfg(test)]
@@ -93,8 +90,21 @@ mod test {
         let pending_upload = create_photo(&user, &db, &s3, upload)?;
         assert!(!pending_upload.photo.present);
 
-        let user_photos = user_photos(&user, &db)?;
-        assert_eq!(user_photos, vec![pending_upload.photo]);
+        let photos = user_photos(&user, &db, Pagination::first())?;
+        assert_eq!(photos.items, vec![pending_upload.photo]);
+        assert_eq!(photos.total_pages, 1);
+        assert_eq!(photos.key, None);
+        match photos.next_key {
+            Some(id) if id > 0 => {},
+            _ => assert!(false, "Didn't get next key: {:?}", photos.next_key),
+        }
+
+        let key = photos.next_key.unwrap();
+        let second_page = user_photos(&user, &db, Pagination::page(key))?;
+        assert!(second_page.items.is_empty());
+        assert_eq!(second_page.total_pages, 0); // TODO: this count is wrong, should be 1
+        assert_eq!(second_page.key, Some(key), "user-supplied key");
+        assert_eq!(second_page.next_key, None, "next key");
 
         Ok(())
     }

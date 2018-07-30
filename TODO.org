@@ -4,11 +4,16 @@
 ** Admin API w/ information about site
 ** DONE users CRUD
 ** DONE password strength check
+
 * API endpoints
 ** DONE sign-upload from howto
 ** DONE put upload behind subscription gate
-** pagination on photo endpoint
+** DONE pagination on photo endpoint
+
+* design
+** how to edited versions of photos interact?
+
 * configuration
-** DONE dev/prod CDN prefixes
 ** app-host env on API
-** api-host env on app
+** DONE dev/prod CDN prefixes
+** DONE api-host env on app

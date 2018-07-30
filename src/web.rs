@@ -6,7 +6,7 @@ use rocket::http::{Cookies, Method};
 use rocket_contrib::Json;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
-use db::{init_db_pool, DbConn};
+use db::{init_db_pool, DbConn, Pagination, Page};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
 use auth::{self, Subscriber, User};
@@ -44,8 +44,13 @@ fn sign_user_upload(user: Subscriber, s3: State<S3Access>, db: DbConn, req: Json
 }
 
 #[get("/photos")]
-fn get_photos(user: User, db: DbConn) -> Result<Json<Vec<photos::Photo>>, ApiError> {
-    let photos = photos::user_photos(&user, &db)?;
+fn get_photos(user: User, db: DbConn) -> Result<Json<Page<photos::Photo>>, ApiError> {
+    get_photos_page(user, db, Pagination::first())
+}
+
+#[get("/photos?<page>")]
+fn get_photos_page(user: User, db: DbConn, page: Pagination) -> Result<Json<Page<photos::Photo>>, ApiError> {
+    let photos = photos::user_photos(&user, &db, page)?;
     Ok(Json(photos))
 }
 
@@ -77,7 +82,7 @@ pub fn rocket() -> Rocket {
         .attach(cors)
         .mount("/api", routes![
             login, logout, register,
-            sign_user_upload, get_photos
+            sign_user_upload, get_photos, get_photos_page
         ])
 }
 

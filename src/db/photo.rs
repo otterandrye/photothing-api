@@ -4,6 +4,7 @@ use diesel::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
 
+use db::pagination::{Paginate, Pagination, Page};
 use db::schema::{photos, photo_attrs};
 use db::user::User;
 use ::util::uuid;
@@ -20,13 +21,19 @@ pub struct Photo {
     pub updated_at: NaiveDateTime,
 }
 
+type PhotoWithAttrs = (Photo, Vec<PhotoAttr>);
+
 impl Photo {
-    pub fn by_user(db: &PgConnection, user: &User) -> Result<Vec<(Photo, Vec<PhotoAttr>)>, Error> {
-        let photos = Photo::belonging_to(user).load::<Photo>(db)?;
-        let attributes = PhotoAttr::belonging_to(&photos)
+    pub fn by_user(db: &PgConnection, user: &User, page: Pagination) -> Result<Page<PhotoWithAttrs>, Error> {
+        let photos = Photo::belonging_to(user)
+             .paginate(page)
+             .load_and_count_pages::<Photo>(db)?;
+        let attributes = PhotoAttr::belonging_to(&photos.items)
             .load(db)?
-            .grouped_by(&photos);
-        Ok(photos.into_iter().zip(attributes).collect::<Vec<_>>())
+            .grouped_by(&photos.items);
+        Ok(photos.map_items(|items| items.into_iter()
+            .zip(attributes)
+            .collect()))
     }
 }
 

@@ -14,7 +14,6 @@ fn post<'a, 'b, 'c>(client: &'a Client, endpoint: &'b str, body: &'c serde_json:
 }
 
 fn assert_user_cookie<'a, 'b>(res: &'a LocalResponse, expected: bool) -> Option<String> {
-    println!("Got headers: {:?}", res.headers());
     for h in res.headers().iter() {
         if h.name() == "Set-Cookie" {
             let found = h.value().starts_with("u=") && !h.value().starts_with("u=; Path=/;");
@@ -104,7 +103,7 @@ fn user_registration_login() {
 
     // finally, check that an authenticated request works
     // via cookie
-    let res =  client.get("/api/photos")
+    let res =  client.get("/api/photos?key=3&per_page=11")
             .header(ContentType::JSON)
             .cookie(login_cookie.clone())
             .dispatch();

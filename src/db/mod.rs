@@ -1,6 +1,9 @@
+mod pagination;
 pub mod photo;
 pub mod user;
 mod schema;
+
+pub use self::pagination::{Page, Pagination};
 
 use std::env;
 use std::ops::Deref;
