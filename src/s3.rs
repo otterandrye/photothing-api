@@ -1,13 +1,15 @@
 use futures::Future;
 use rusoto_core::{ProvideAwsCredentials, Region};
 use rusoto_core::credential::{AwsCredentials, EnvironmentProvider};
-use rusoto_s3::PutObjectRequest;
+use rusoto_s3::{S3Client, PutObjectRequest,
+                DeleteObjectRequest, DeleteObjectOutput, DeleteObjectError};
 use rusoto_s3::util::PreSignedRequest;
 
 pub struct S3Access {
     bucket: String,
     region: Region,
     creds: AwsCredentials,
+    client: S3Client,
     cdn_url: String,
     cdn_prefix: Option<String>,
 }
@@ -17,7 +19,8 @@ impl S3Access {
         let region = Region::default(); // reads from environment var
         let creds = EnvironmentProvider.credentials().wait()
             .expect("couldn't build AWS credentials");
-        S3Access { bucket, region, creds, cdn_url, cdn_prefix }
+        let client = S3Client::new(region.clone());
+        S3Access { bucket, region, creds, client, cdn_url, cdn_prefix }
     }
 }
 
@@ -35,12 +38,16 @@ pub struct UploadResponse {
     get_url: String,
 }
 
-pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str) -> UploadResponse {
-    // we use environment prefixes to allow the CDN to route to the right s3 bucket
-    let destination = match &s3.cdn_prefix {
+// we use environment prefixes to allow the CDN to route to the right s3 bucket
+fn get_destination(s3: &S3Access, directory: &str, id: &str) -> String {
+    match &s3.cdn_prefix {
         Some(prefix) => format!("{}/{}/{}", prefix, directory, id),
         _ => format!("{}/{}", directory, id),
-    };
+    }
+}
+
+pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str) -> UploadResponse {
+    let destination = get_destination(s3, directory, id);
     let put_req = PutObjectRequest {
         bucket: s3.bucket.clone(),
         key: destination.clone(),
@@ -56,6 +63,18 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str)
         directory: directory.to_owned(),
         filename: req.filename.clone()
     }
+}
+
+#[allow(dead_code)]
+pub fn remove_file(s3: &S3Access, directory: &str, id: &str) -> Result<DeleteObjectOutput, DeleteObjectError> {
+    let location = get_destination(s3, directory, id);
+    let delete = DeleteObjectRequest {
+        bucket: s3.bucket.clone(),
+        key: location.clone(),
+        ..Default::default()
+    };
+    use rusoto_s3::S3;
+    s3.client.delete_object(delete).sync()
 }
 
 #[cfg(test)]
@@ -83,7 +102,8 @@ mod test {
             .credentials().wait().expect("couldn't make static creds");
         let bucket = String::from("photothing-heroku-dev");
         let cdn_url = "foo.com".to_string();
-        let access = S3Access { bucket, creds, region: Region::UsEast1, cdn_url, cdn_prefix: None };
+        let client = S3Client::new(Region::UsEast1);
+        let access = S3Access { bucket, creds, client, region: Region::UsEast1, cdn_url, cdn_prefix: None };
         let req = UploadRequest {
             filename: String::from(""), file_type: String::from("")
         };
@@ -108,7 +128,8 @@ mod test {
         let bucket = String::from("photothing-heroku-dev");
         let cdn_url = env::var("ROCKET_CDN_URL").expect("missing cdn url");
         let cdn_prefix = Some("dev".into()); // tests always run against the dev bucket
-        let access = S3Access { bucket, creds, region: Region::UsEast1, cdn_url, cdn_prefix };
+        let client = S3Client::new(Region::UsEast1);
+        let access = S3Access { bucket, creds, client, region: Region::UsEast1, cdn_url, cdn_prefix };
         let suffix: u8 = rand::random();
         let filename = format!("upload-{}.txt", suffix);
         let req = UploadRequest {
@@ -119,7 +140,7 @@ mod test {
         let url = response.url;
         assert!(url.starts_with("https://"));
         assert!(response.get_url.find(&access.cdn_url).is_some());
-        assert!(response.get_url.find(&access.cdn_prefix.expect("prefix in dev")).is_some());
+        assert!(response.get_url.find(&access.cdn_prefix.clone().expect("prefix in dev")).is_some());
         assert_eq!(response.filename, filename);
         assert_eq!(response.directory, "automation");
 
@@ -139,5 +160,8 @@ mod test {
         let mut get = client.get(&response.get_url).send().expect("CDN request failed");
         assert_eq!(get.status(), StatusCode::Ok, "200 getting uploaded content from CDN");
         assert_eq!(get.text().expect("no text"), body, "got correct content back");
+
+        // now delete the file
+        remove_file(&access, "automation", &filename).expect("file delete failed");
     }
 }
