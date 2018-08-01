@@ -1,7 +1,7 @@
 mod pagination;
 pub mod photo;
 pub mod user;
-mod schema;
+pub mod schema;
 
 pub use self::pagination::{Page, Pagination};
 

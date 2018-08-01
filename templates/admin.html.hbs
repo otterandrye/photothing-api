@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PT stats</title>
+  </head>
+<body>
+  <h1>Admin things</h1>
+
+  <h2>Users</h2>
+  <ul>
+    <li>Total: {{ users.total }}</li>
+    <li>Subscribed: {{ users.subscribed }}</li>
+  </ul>
+
+  <h2>S3</h2>
+  <ul>
+    <li>Bucket: {{ s3.bucket }}</li>
+    <li>CDN url: {{ s3.cdn }}</li>
+    <li>CDN prefix?: {{ s3.cdn_prefix }}</li>
+  </ul>
+
+  <h2>Photos</h2>
+  <ul>
+    <li>Created: {{ photos.created }}</li>
+    <li>Present (uploaded): {{ photos.uploaded }}</li>
+  </ul>
+</body>
+</html>

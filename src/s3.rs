@@ -6,12 +6,12 @@ use rusoto_s3::{S3Client, PutObjectRequest,
 use rusoto_s3::util::PreSignedRequest;
 
 pub struct S3Access {
-    bucket: String,
+    pub bucket: String,
     region: Region,
     creds: AwsCredentials,
     client: S3Client,
-    cdn_url: String,
-    cdn_prefix: Option<String>,
+    pub cdn_url: String,
+    pub cdn_prefix: Option<String>,
 }
 
 impl S3Access {

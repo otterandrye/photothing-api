@@ -3,13 +3,14 @@ use dotenv;
 use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
 use rocket::http::{Cookies, Method};
-use rocket_contrib::Json;
+use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn, Pagination, Page};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
-use auth::{self, Subscriber, User};
+use auth::{self, Admin, Subscriber, User};
+use admin;
 use photos;
 
 #[post("/login", data = "<user>")]
@@ -54,6 +55,12 @@ fn get_photos_page(user: User, db: DbConn, page: Pagination) -> Result<Json<Page
     Ok(Json(photos))
 }
 
+#[get("/admin")]
+fn admin(_admin: Admin, s3: State<S3Access>, db: DbConn) -> Result<Template, ApiError> {
+    let context = admin::fetch_dashboard(&s3.inner(), &db)?;
+    Ok(Template::render("admin", &context))
+}
+
 // Main entry that creates the web application, connects to the database and binds the web routes
 pub fn rocket() -> Rocket {
     dotenv::dotenv().ok(); // read from a .env file if one is present
@@ -80,6 +87,8 @@ pub fn rocket() -> Rocket {
         }))
         .manage(init_db_pool())
         .attach(cors)
+        .attach(Template::fairing())
+        .mount("/", routes![admin])
         .mount("/api", routes![
             login, logout, register,
             sign_user_upload, get_photos, get_photos_page

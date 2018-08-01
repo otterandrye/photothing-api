@@ -123,6 +123,13 @@ fn user_registration_login() {
             .dispatch();
     assert_eq!(res.status(), Status::Forbidden);
 
+    // don't let normal users into the admin page
+    let res =  client.get("/admin")
+            .header(ContentType::JSON)
+            .cookie(login_cookie.clone())
+            .dispatch();
+    assert_eq!(res.status(), Status::NotFound);
+
     // and that logout succeeds & clears the user cookie
     let res =  client.post("/api/logout")
             .header(ContentType::JSON)

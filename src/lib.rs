@@ -25,6 +25,7 @@ extern crate reqwest;
 #[cfg(test)]
 extern crate rand;
 
+mod admin;
 mod auth;
 mod db;
 mod errors;
