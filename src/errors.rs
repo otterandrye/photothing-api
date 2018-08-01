@@ -26,10 +26,13 @@ impl ApiError {
     pub fn server_error<T>(e: Result<T, Error>) -> Result<T, ApiError> {
         match e {
             Ok(t) => Ok(t),
-            Err(dbe) => Err(ApiError {
-                status: Status::InternalServerError,
-                message: format!("{:?}", dbe),
-            })
+            Err(e) => {
+                error!("Caught error: {:?}", e);
+                Err(ApiError {
+                    status: Status::InternalServerError,
+                    message: format!("{:?}", e),
+                })
+            }
         }
     }
 
