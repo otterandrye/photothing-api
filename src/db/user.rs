@@ -16,6 +16,7 @@ pub struct User {
     pub name: Option<String>,
     pub subscription_expires: Option<NaiveDate>,
     pub updated_at: NaiveDateTime,
+    pub joined: NaiveDateTime,
 }
 
 impl User {
@@ -48,7 +49,8 @@ impl User {
             id: 1, email: String::from("foo"),
             uuid: uuid().0, password: String::from("nope"),
             name: None, subscription_expires: None,
-            updated_at: NaiveDateTime::from_timestamp(0, 42_000_000)
+            updated_at: NaiveDateTime::from_timestamp(0, 42_000_000),
+            joined: NaiveDateTime::from_timestamp(0, 42_000_000),
         }
     }
 }
