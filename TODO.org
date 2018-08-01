@@ -1,7 +1,7 @@
 * auth
 ** 2fa
 ** reCaptcha on registration
-** Admin API w/ information about site
+** password reset
 ** DONE users CRUD
 ** DONE password strength check
 
@@ -17,3 +17,30 @@
 ** app-host env on API
 ** DONE dev/prod CDN prefixes
 ** DONE api-host env on app
+
+* user-facing stuff before launch
+** marketing site
+*** homepage
+*** pricing grid
+*** about us / licensing page
+** analytics on site
+*** DONE matomo site
+*** DONE matomo account for Marcus
+** 'album' concept (photo attribute)
+*** think about ordering inside albums
+** photo gallery
+** list of photos
+
+* Admin dashboard w/ information about site
+** how much space are users using?
+** job to delete stale photos
+** some way to handle DMCA'd photos
+
+* legal
+** LLC
+** stripe integration
+** product name
+*** domain
+*** emails
+** logo
+** ToS / Use
