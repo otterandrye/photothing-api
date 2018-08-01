@@ -25,8 +25,8 @@ const DEFAULT_PER_PAGE: i64 = 30;
 // Struct for collecting a user's pagination params
 #[derive(Debug, Clone, Copy)]
 pub struct Pagination {
-    key: Option<i32>,
-    per_page: i64,
+    pub key: Option<i32>,
+    pub per_page: i64,
 }
 
 impl Pagination {
@@ -77,7 +77,7 @@ impl<'f> FromForm<'f> for Pagination {
 pub struct Page<T> {
     pub key: Option<i32>,
     pub next_key: Option<i32>,
-    pub total_pages: i64,
+    pub remaining: i64,
     pub items: Vec<T>,
 }
 
@@ -94,7 +94,7 @@ impl<T> Page<T> {
         Page {
             items: item_mapper(self.items),
             key: self.key,
-            total_pages: self.total_pages,
+            remaining: self.remaining,
             next_key: self.next_key
         }
     }
@@ -124,13 +124,12 @@ impl<T> Paginated<T> {
     where
         Self: LoadQuery<PgConnection, (U, i64, i32)>,
     {
-        let per_page = self.page.per_page;
         let key = self.page.key;
         let results = self.load::<(U, i64, i32)>(conn)?;
         let (total, next_key) = results.get(0).map(|x| (x.1, Some(x.2))).unwrap_or((0, None));
-        let items = results.into_iter().map(|x| x.0).collect();
-        let total_pages = (total as f64 / per_page as f64).ceil() as i64;
-        let page = Page { items, key, next_key, total_pages };
+        let items = results.into_iter().map(|x| x.0).collect::<Vec<_>>();
+        let remaining = total - items.len() as i64;
+        let page = Page { items, key, next_key, remaining };
         Ok(page)
     }
 }
@@ -164,13 +163,13 @@ mod test {
 
     #[test]
     fn page_map_items() {
-        let pg = Page { items: vec![1, 2, 3], key: Some(11), next_key: Some(55), total_pages: 1};
+        let pg = Page { items: vec![1, 2, 3], key: Some(11), next_key: Some(55), remaining: 1};
         let mapped = pg.clone()
             .map_items(|items| items.into_iter().map(|i: i32| i.to_string()).collect());
         assert_eq!(mapped.items, vec!["1", "2", "3"]);
         assert_eq!(pg.key, mapped.key);
         assert_eq!(pg.next_key, mapped.next_key);
-        assert_eq!(pg.total_pages, mapped.total_pages);
+        assert_eq!(pg.remaining, mapped.remaining);
     }
 
     #[test]

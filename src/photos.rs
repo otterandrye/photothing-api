@@ -92,7 +92,7 @@ mod test {
 
         let photos = user_photos(&user, &db, Pagination::first())?;
         assert_eq!(photos.items, vec![pending_upload.photo]);
-        assert_eq!(photos.total_pages, 1);
+        assert_eq!(photos.remaining, 0);
         assert_eq!(photos.key, None);
         match photos.next_key {
             Some(id) if id > 0 => {},
@@ -102,9 +102,23 @@ mod test {
         let key = photos.next_key.unwrap();
         let second_page = user_photos(&user, &db, Pagination::page(key))?;
         assert!(second_page.items.is_empty());
-        assert_eq!(second_page.total_pages, 0); // TODO: this count is wrong, should be 1
+        assert_eq!(second_page.remaining, 0);
         assert_eq!(second_page.key, Some(key), "user-supplied key");
         assert_eq!(second_page.next_key, None, "next key");
+
+        for _ in 0..50 {
+            let upload = UploadRequest::fake();
+            create_photo(&user, &db, &s3, upload)?;
+        }
+        let photos = user_photos(&user, &db, Pagination::first())?;
+        assert_eq!(photos.items.len() as i64, Pagination::first().per_page);
+        assert_eq!(photos.remaining, 21); // 51 uploaded, got first 30
+
+        let mut small_pg = Pagination::first();
+        small_pg.per_page = 5;
+        let fewer = user_photos(&user, &db, small_pg)?;
+        assert_eq!(fewer.items.len() as i64, small_pg.per_page);
+        assert_eq!(fewer.remaining, 46); // 51 uploaded, asked for 5
 
         Ok(())
     }
