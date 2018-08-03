@@ -103,9 +103,9 @@ impl NewUser {
 #[primary_key(uuid)]
 #[belongs_to(User, foreign_key = "user_id")]
 pub struct PasswordReset {
-    uuid: String,
-    user_id: i32,
-    created_at: DateTime<Utc>,
+    pub uuid: String,
+    pub user_id: i32,
+    pub created_at: DateTime<Utc>,
 }
 
 impl PasswordReset {
@@ -157,20 +157,12 @@ impl NewUser {
 
 #[cfg(test)]
 mod functest {
-    use dotenv;
-
-    use db::{DbConn, init_db_pool};
+    use db::test_db;
     use super::*;
-
-    fn setup() -> DbConn {
-        dotenv::dotenv().ok();
-        let pool = init_db_pool();
-        DbConn(pool.get().expect("couldn't connect to db"))
-    }
 
     #[test]
     fn user_crud() {
-        let db = setup();
+        let db = test_db();
         let user = NewUser::fake("foo");
         let user = user.insert(&db).expect("couldn't make user");
         assert!(user.subscription_expires.is_none(), "new user has subscription by default");
@@ -188,7 +180,7 @@ mod functest {
 
     #[test]
     fn password_reset_crud() {
-        let db = setup();
+        let db = test_db();
         let user = NewUser::fake("pw_crud").insert(&db).expect("couldn't make user");
         let m_user = User::for_update(&db, &user.email)
             .expect("couldnt get for update").expect("found user");

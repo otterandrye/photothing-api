@@ -1,7 +1,7 @@
 * auth
 ** 2fa
 ** reCaptcha on registration
-** password reset
+** TODO password reset
 ** DONE users CRUD
 ** DONE password strength check
 
@@ -17,6 +17,7 @@
 ** app-host env on API
 ** DONE dev/prod CDN prefixes
 ** DONE api-host env on app
+** double check timestamp columns on database
 
 * user-facing stuff before launch
 ** marketing site
@@ -27,7 +28,7 @@
 *** DONE matomo site
 *** DONE matomo account for Marcus
 ** 'album' concept (photo attribute)
-*** think about ordering inside albums
+*** TODO think about ordering inside albums
 ** photo gallery
 ** list of photos
 

@@ -50,3 +50,11 @@ impl Deref for DbConn {
         &self.0
     }
 }
+
+#[cfg(test)]
+pub fn test_db() -> DbConn {
+    use dotenv;
+    dotenv::dotenv().ok();
+    let pool = init_db_pool();
+    DbConn(pool.get().expect("couldn't connect to db"))
+}

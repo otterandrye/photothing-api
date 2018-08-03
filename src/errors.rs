@@ -7,6 +7,7 @@ use rocket::http::{ContentType, Status};
 use rocket::response::{Result as RocketResult, Responder};
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct ApiError {
     status: Status,
     message: String,

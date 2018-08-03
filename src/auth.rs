@@ -7,7 +7,7 @@ use chrono::prelude::*;
 use zxcvbn::zxcvbn as check_password;
 
 use db::DbConn;
-use db::user::NewUser;
+use db::user::{NewUser, PasswordReset};
 use errors::ApiError;
 use util::hash_password;
 
@@ -23,6 +23,7 @@ static PW_SIMPLE: &str = "PW_TOO_SIMPLE";
 static EMAIL_ERROR: &str = "INVALID_EMAIL";
 
 #[derive(Deserialize, Debug)]
+#[cfg_attr(test, derive(Clone))]
 pub struct UserLogin {
     email: String,
     password: String,
@@ -173,6 +174,42 @@ impl User {
     }
 }
 
+#[allow(dead_code)]
+pub fn start_password_reset(email: &str, db: &DbConn) -> Result<Option<PasswordReset>, ApiError> {
+    let user = ApiError::server_error(User::by_email(&db, &email))?;
+    match user {
+        Some(user) => {
+            let reset = ApiError::server_error(PasswordReset::create(&user, db))?;
+            // TODO: trigger email here
+            Ok(Some(reset))
+        }
+        _ => Ok(None)
+    }
+}
+
+#[allow(dead_code)]
+pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Result<bool, ApiError> {
+    // handle potential user-caused errors first, always hash to prevent timing attacks
+    ApiError::bad_request(reset.validate())?;
+    let hashed = ApiError::bad_request(hash_password(&reset.password))?;
+
+    use diesel::Connection;
+
+    // run this set of DB changes in a transaction so we never delete the reset w/o updating the pw
+    ApiError::server_error(db.transaction(|| {
+        let user = User::for_update(&db, &reset.email)?;
+        if let Some(user) = user {
+            let reset_auth = PasswordReset::by_uuid(&db, &user, uuid)?;
+            if let Some(reset_auth) = reset_auth {
+                reset_auth.delete(&db)?;
+                user.change_password(&db, hashed)?;
+                return Ok(true)
+            }
+        }
+        Ok(false) // deliberately don't tell the user why their request failed
+    }))
+}
+
 // A subscriber is a user with a non-null subscription expiry date that is after today
 pub struct Subscriber(pub User);
 
@@ -274,7 +311,48 @@ mod test {
 
 #[cfg(test)]
 mod functest {
-    use dotenv;
-    use db::{DbConn, init_db_pool};
+    use chrono::Duration;
+    use db::test_db;
     use super::*;
+
+    #[test]
+    fn password_reset_no_user() {
+        let db = test_db();
+        let no_user = start_password_reset("foo@bizbang", &db);
+        assert_eq!(no_user, Ok(None));
+    }
+
+    #[test]
+    fn password_reset() {
+        let db = test_db();
+        let user = NewUser::fake("pw_reset_flow@gmail.com").insert(&db)
+            .expect("couldn't make user");
+
+        // kick off the password reset flow
+        let reset = start_password_reset(&user.email, &db)
+            .expect("db error creating reset").expect("didn't get reset back");
+        assert_eq!(reset.user_id, user.id);
+        assert!(reset.created_at < Utc::now());
+        assert!(reset.created_at.signed_duration_since(Utc::now()) < Duration::seconds(3));
+
+        let new_pw = UserLogin {
+            email: user.email.clone(),
+            password: String::from("Gwc5C5KuavgeP5kBfhx7")
+        };
+        // can't reset without having the right magic token
+        let reset_rejected = handle_password_reset(new_pw.clone(), "bad-reset-uuid", &db);
+        assert_eq!(reset_rejected, Ok(false));
+
+        // reset the user's password
+        let reset_succeeded = handle_password_reset(new_pw.clone(), &reset.uuid, &db);
+        assert_eq!(reset_succeeded, Ok(true));
+
+        // verify that the DB was updated with the new password
+        let user = User::by_email(&db, &new_pw.email).expect("db").expect("found");
+        assert!(verify(&new_pw.password, &user.password).expect("bcrypt"));
+
+        // and that we can't reset the PW again
+        let reset_already_used = handle_password_reset(new_pw.clone(), &reset.uuid, &db);
+        assert_eq!(reset_already_used, Ok(false));
+    }
 }
