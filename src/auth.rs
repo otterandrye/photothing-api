@@ -277,21 +277,4 @@ mod functest {
     use dotenv;
     use db::{DbConn, init_db_pool};
     use super::*;
-
-    #[test]
-    fn edit_subscription() {
-        dotenv::dotenv().ok();
-        let pool = init_db_pool();
-        let db = DbConn(pool.get().expect("couldn't connect to db"));
-        let email = "subs";
-        let user = NewUser::fake(email);
-        let user = user.insert(&db).expect("couldn't make user");
-
-        let long_ago = NaiveDate::from_ymd(2015, 3, 14);
-        let user = user.edit_subscription(&db, Some(long_ago)).expect("edit failed");
-        assert_eq!(user.subscription_expires, Some(long_ago));
-
-        let user = user.edit_subscription(&db, None).expect("edit failed");
-        assert_eq!(user.subscription_expires, None);
-    }
 }
