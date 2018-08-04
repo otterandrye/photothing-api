@@ -23,23 +23,23 @@ impl<'r> Responder<'r> for ApiError {
 }
 
 impl ApiError {
-    pub fn server_error<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
-        e.map_err(|e| {
-            error!("Caught error: {:?}", e);
+    fn message_with_status<T, E: Debug>(e: Result<T, E>, status: Status) -> Result<T, ApiError> {
+        e.map_err(|e|
             ApiError {
-                status: Status::BadRequest,
+                status,
                 message: format!("{:?}", e),
-            }
-        })
+            })
+    }
+
+    pub fn server_error<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
+        {
+            let _log = e.as_ref().map_err(|e| error!("Caught error: {:?}", e));
+        }
+        ApiError::message_with_status(e, Status::BadRequest)
     }
 
     pub fn bad_request<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
-        e.map_err(|e| {
-            ApiError {
-                status: Status::BadRequest,
-                message: format!("{:?}", e),
-            }
-        })
+        ApiError::message_with_status(e, Status::BadRequest)
     }
 
     pub fn unauthorized() -> ApiError {
