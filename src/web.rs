@@ -15,10 +15,12 @@ use auth::guards::*;
 use admin;
 use photos;
 
+pub type Api<T> = Result<Json<T>, ApiError>;
+
 #[post("/login", data = "<user>")]
-fn login(db: DbConn, cookies: Cookies, user: Json<auth::UserLogin>)
-    -> Result<Json<auth::UserCredentials>, ApiError>
-{
+fn login(
+    db: DbConn, cookies: Cookies, user: Json<auth::UserLogin>
+) -> Api<auth::UserCredentials> {
     match auth::try_login_user(user.into_inner(), &db, cookies) {
         Some(user) => Ok(Json(user)),
         None => Err(ApiError::unauthorized()),
@@ -26,33 +28,33 @@ fn login(db: DbConn, cookies: Cookies, user: Json<auth::UserLogin>)
 }
 
 #[post("/logout")]
-fn logout(_user: User, cookies: Cookies) -> String {
+fn logout(_user: User, cookies: Cookies) -> Api<String> {
     auth::logout(cookies);
-    String::from(r#"{"logout":"Ok"}"#)
+    Ok(Json(json!({"logout": "Ok"}).to_string()))
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, user: Json<auth::UserLogin>) -> Result<Json<auth::UserCreateResponse>, ApiError> {
+fn register(db: DbConn, user: Json<auth::UserLogin>) -> Api<auth::UserCreateResponse> {
     let user = auth::create_user(user.into_inner(), &db)?;
     Ok(Json(user))
 }
 
 #[post("/upload", data = "<req>")]
-fn sign_user_upload(user: Subscriber, s3: State<S3Access>, db: DbConn, req: Json<UploadRequest>)
-    -> Result<Json<photos::PendingUpload>, ApiError>
-{
+fn sign_user_upload(
+    user: Subscriber, s3: State<S3Access>, db: DbConn, req: Json<UploadRequest>
+) -> Api<photos::PendingUpload> {
     let user = user.0;
     let photo = photos::create_photo(&user, &db, s3.inner(), req.into_inner())?;
     Ok(Json(photo))
 }
 
 #[get("/photos")]
-fn get_photos(user: User, db: DbConn) -> Result<Json<Page<photos::Photo>>, ApiError> {
+fn get_photos(user: User, db: DbConn) -> Api<Page<photos::Photo>> {
     get_photos_page(user, db, Pagination::first())
 }
 
 #[get("/photos?<page>")]
-fn get_photos_page(user: User, db: DbConn, page: Pagination) -> Result<Json<Page<photos::Photo>>, ApiError> {
+fn get_photos_page(user: User, db: DbConn, page: Pagination) -> Api<Page<photos::Photo>> {
     let photos = photos::user_photos(&user, &db, page)?;
     Ok(Json(photos))
 }
