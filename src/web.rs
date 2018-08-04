@@ -10,7 +10,8 @@ use db::{init_db_pool, DbConn, Pagination, Page};
 use email::init_emailer;
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
-use auth::{self, Admin, Subscriber, User};
+use auth;
+use auth::guards::*;
 use admin;
 use photos;
 
@@ -18,7 +19,7 @@ use photos;
 fn login(db: DbConn, cookies: Cookies, user: Json<auth::UserLogin>)
     -> Result<Json<auth::UserCredentials>, ApiError>
 {
-    match auth::login_user(user.into_inner(), &db, cookies) {
+    match auth::try_login_user(user.into_inner(), &db, cookies) {
         Some(user) => Ok(Json(user)),
         None => Err(ApiError::unauthorized()),
     }

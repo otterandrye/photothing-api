@@ -3,7 +3,7 @@ use chrono::serde::ts_seconds;
 use diesel::Connection;
 use std::collections::HashMap;
 
-use auth::User;
+use db::user::User;
 use db::{DbConn, Pagination, Page};
 use db::photo::{NewPhotoAttr, NewPhoto, Photo as DbPhoto, PhotoAttr, AttributeKeyValue};
 use errors::ApiError;
