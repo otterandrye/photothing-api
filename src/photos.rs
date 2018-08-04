@@ -1,5 +1,5 @@
-use chrono::NaiveDateTime;
-use chrono::naive::serde::ts_seconds;
+use chrono::prelude::*;
+use chrono::serde::ts_seconds;
 use diesel::Connection;
 use std::collections::HashMap;
 
@@ -15,7 +15,7 @@ pub struct Photo {
     uuid: String,
     present: bool,
     #[serde(with = "ts_seconds")]
-    created_at: NaiveDateTime,
+    created_at: DateTime<Utc>,
     attributes: HashMap<String, String>,
 }
 

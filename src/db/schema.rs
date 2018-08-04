@@ -21,8 +21,8 @@ table! {
         uuid -> Varchar,
         owner -> Int4,
         present -> Nullable<Bool>,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -34,8 +34,8 @@ table! {
         password -> Varchar,
         name -> Nullable<Varchar>,
         subscription_expires -> Nullable<Date>,
-        updated_at -> Timestamp,
-        joined -> Timestamp,
+        updated_at -> Timestamptz,
+        joined -> Timestamptz,
     }
 }
 

@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use diesel;
 use diesel::PgConnection;
 use diesel::result::Error;
@@ -17,8 +17,8 @@ pub struct Photo {
     pub uuid: String,
     pub owner: i32, // users.id
     pub present: Option<bool>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 type PhotoWithAttrs = (Photo, Vec<PhotoAttr>);
@@ -137,8 +137,8 @@ mod test {
             uuid: "fake".into(),
             owner: 2,
             present: Some(false),
-            created_at: NaiveDateTime::from_timestamp(0, 42_000_000),
-            updated_at: NaiveDateTime::from_timestamp(0, 42_000_000),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 
