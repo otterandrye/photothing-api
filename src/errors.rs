@@ -22,17 +22,18 @@ impl<'r> Responder<'r> for ApiError {
     }
 }
 
+// These methods let us convert any error type into an `ApiError` so that web-facing methods
+// can return a well-defined `Result` and use the `?` operator to check for failures
+// for example:
+// `ApiError::bad_request(new_user.validate())?;` to return a 400 response for invalid user input
 impl ApiError {
     fn message_with_status<T, E: Debug>(e: Result<T, E>, status: Status) -> Result<T, ApiError> {
-        e.map_err(|e|
-            ApiError {
-                status,
-                message: format!("{:?}", e),
-            })
+        e.map_err(|e| ApiError { status, message: format!("{:?}", e) })
     }
 
     pub fn server_error<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
         {
+            // These errors are always unexpected, so log an error message when they occur
             let _log = e.as_ref().map_err(|e| error!("Caught error: {:?}", e));
         }
         ApiError::message_with_status(e, Status::BadRequest)
