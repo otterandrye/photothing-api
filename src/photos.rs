@@ -44,7 +44,10 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
     -> Result<PendingUpload, ApiError>
 {
     let filename = ApiError::bad_request(AttributeKeyValue::new("filename", &upload.filename))?;
-    let txn = db.transaction::<_, _, _>(|| {
+
+    use diesel::result::Error;
+
+    let txn = db.transaction::<_, Error, _>(|| {
         let photo = NewPhoto::new(user);
         let photo = photo.insert(db)?;
         let filename_attr = NewPhotoAttr::new(&photo, filename);

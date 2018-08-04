@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::io::Cursor;
 
-use diesel::result::Error;
 use rocket::{Response, Request};
 use rocket::http::{ContentType, Status};
 use rocket::response::{Result as RocketResult, Responder};
@@ -24,27 +23,23 @@ impl<'r> Responder<'r> for ApiError {
 }
 
 impl ApiError {
-    pub fn server_error<T>(e: Result<T, Error>) -> Result<T, ApiError> {
-        match e {
-            Ok(t) => Ok(t),
-            Err(e) => {
-                error!("Caught error: {:?}", e);
-                Err(ApiError {
-                    status: Status::InternalServerError,
-                    message: format!("{:?}", e),
-                })
+    pub fn server_error<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
+        e.map_err(|e| {
+            error!("Caught error: {:?}", e);
+            ApiError {
+                status: Status::BadRequest,
+                message: format!("{:?}", e),
             }
-        }
+        })
     }
 
     pub fn bad_request<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
-        match e {
-            Ok(t) => Ok(t),
-            Err(d) => Err(ApiError {
+        e.map_err(|e| {
+            ApiError {
                 status: Status::BadRequest,
-                message: format!("{:?}", d),
-            })
-        }
+                message: format!("{:?}", e),
+            }
+        })
     }
 
     pub fn unauthorized() -> ApiError {

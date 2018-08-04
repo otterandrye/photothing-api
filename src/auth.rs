@@ -8,6 +8,7 @@ use zxcvbn::zxcvbn as check_password;
 
 use db::DbConn;
 use db::user::{NewUser, PasswordReset};
+use email::Emailer;
 use errors::ApiError;
 use util::hash_password;
 
@@ -175,12 +176,16 @@ impl User {
 }
 
 #[allow(dead_code)]
-pub fn start_password_reset(email: &str, db: &DbConn) -> Result<Option<PasswordReset>, ApiError> {
+pub fn start_password_reset<E: Emailer>(
+    email: &str, db: &DbConn, emailer: &mut E
+) -> Result<Option<PasswordReset>, ApiError> {
     let user = ApiError::server_error(User::by_email(&db, &email))?;
     match user {
         Some(user) => {
             let reset = ApiError::server_error(PasswordReset::create(&user, db))?;
-            // TODO: trigger email here
+            // TODO: real message, handle failure via transaction
+            let message = format!("Your password reset token is '{}'", &reset.uuid);
+            ApiError::server_error(emailer.send_message(&user.email, &message))?;
             Ok(Some(reset))
         }
         _ => Ok(None)
@@ -194,9 +199,10 @@ pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Resul
     let hashed = ApiError::bad_request(hash_password(&reset.password))?;
 
     use diesel::Connection;
+    use diesel::result::Error;
 
     // run this set of DB changes in a transaction so we never delete the reset w/o updating the pw
-    ApiError::server_error(db.transaction(|| {
+    ApiError::server_error::<_, Error>(db.transaction(|| {
         let user = User::for_update(&db, &reset.email)?;
         if let Some(user) = user {
             let reset_auth = PasswordReset::by_uuid(&db, &user, uuid)?;
@@ -313,27 +319,35 @@ mod test {
 mod functest {
     use chrono::Duration;
     use db::test_db;
+    use email::LogOnlyEmailer;
     use super::*;
 
     #[test]
     fn password_reset_no_user() {
         let db = test_db();
-        let no_user = start_password_reset("foo@bizbang", &db);
+        let mut emailer = LogOnlyEmailer::new();
+        let no_user = start_password_reset("foo@bizbang", &db, &mut emailer);
         assert_eq!(no_user, Ok(None));
+        assert_eq!(emailer.messages().len(), 0);
     }
 
     #[test]
     fn password_reset() {
         let db = test_db();
+        let mut emailer = LogOnlyEmailer::new();
         let user = NewUser::fake("pw_reset_flow@gmail.com").insert(&db)
             .expect("couldn't make user");
 
         // kick off the password reset flow
-        let reset = start_password_reset(&user.email, &db)
+        assert_eq!(emailer.messages().len(), 0);
+        let reset = start_password_reset(&user.email, &db, &mut emailer)
             .expect("db error creating reset").expect("didn't get reset back");
         assert_eq!(reset.user_id, user.id);
         assert!(reset.created_at < Utc::now());
         assert!(reset.created_at.signed_duration_since(Utc::now()) < Duration::seconds(3));
+        let message = emailer.messages().get(0).expect("missing message");
+        let expected = format!("<pw_reset_flow@gmail.com>::[Your password reset token is '{}']", &reset.uuid);
+        assert_eq!(message, &expected);
 
         let new_pw = UserLogin {
             email: user.email.clone(),

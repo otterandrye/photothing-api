@@ -7,6 +7,7 @@ use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn, Pagination, Page};
+use email::init_emailer;
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
 use auth::{self, Admin, Subscriber, User};
@@ -86,6 +87,7 @@ pub fn rocket() -> Rocket {
             Ok(rocket.manage(S3Access::new(bucket, cdn_url, cdn_prefix)))
         }))
         .manage(init_db_pool())
+        .manage(init_emailer())
         .attach(cors)
         .attach(Template::fairing())
         .mount("/", routes![admin])
