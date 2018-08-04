@@ -1,5 +1,4 @@
 use dotenv;
-
 use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
 use rocket::http::{Cookies, Method};
@@ -7,7 +6,7 @@ use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn, Pagination, Page};
-use email::init_emailer;
+use email::{Emailer, init_emailer};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
 use auth;
@@ -37,6 +36,26 @@ fn logout(_user: User, cookies: Cookies) -> Api<String> {
 fn register(db: DbConn, user: Json<auth::UserLogin>) -> Api<auth::UserCreateResponse> {
     let user = auth::create_user(user.into_inner(), &db)?;
     Ok(Json(user))
+}
+
+#[post("/reset_password/<email>")]
+fn start_reset_password(
+    db: DbConn, emailer: State<Emailer>, email: String,
+) -> Api<String> {
+    let status = match auth::start_password_reset(&email, &db, emailer.inner()) {
+        Ok(Some(_)) => "Ok",
+        _ => "Failed",
+    };
+    Ok(Json(json!({"reset": status}).to_string()))
+}
+
+#[put("/reset_password/<uuid>", data="<user>")]
+fn reset_password(db: DbConn, user: Json<auth::UserLogin>, uuid: String) -> Api<String> {
+    let status = match auth::handle_password_reset(user.into_inner(), &uuid, &db) {
+        Ok(true) => "Ok",
+        _ => "Failed",
+    };
+    Ok(Json(json!({"reset": status}).to_string()))
 }
 
 #[post("/upload", data = "<req>")]
@@ -70,7 +89,7 @@ pub fn rocket() -> Rocket {
     dotenv::dotenv().ok(); // read from a .env file if one is present
     let cors = Cors {
         allowed_origins: AllowedOrigins::all(), // TODO: put into configuration
-        allowed_methods: vec![Method::Get, Method::Post].into_iter().map(From::from).collect(),
+        allowed_methods: vec![Method::Get, Method::Post, Method::Put].into_iter().map(From::from).collect(),
         allowed_headers: AllowedHeaders::all(),
         allow_credentials: true,
         ..Default::default()
@@ -95,7 +114,7 @@ pub fn rocket() -> Rocket {
         .attach(Template::fairing())
         .mount("/", routes![admin])
         .mount("/api", routes![
-            login, logout, register,
+            login, logout, register, start_reset_password, reset_password,
             sign_user_upload, get_photos, get_photos_page
         ])
 }

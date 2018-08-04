@@ -1,33 +1,45 @@
+use std::sync::Mutex;
 
-pub trait Emailer {
-    // TODO: temporary API for testing
-    fn send_message(&mut self, address: &str, message: &str) -> Result<(), String>;
-}
-
-pub struct LogOnlyEmailer {
+pub struct EmailClient {
     sent_messages: Vec<String>,
 }
 
-impl LogOnlyEmailer {
+impl EmailClient {
     pub fn new() -> Self {
-        LogOnlyEmailer { sent_messages: vec![] }
+        EmailClient { sent_messages: vec![] }
     }
 
-    #[cfg(test)]    
+    pub fn send_message(&mut self, address: &str, message: &str) -> Result<(), String> {
+        info!("Sending message to '{}': '{}'", address, message);
+        self.sent_messages.push(format!("<{}>::[{}]", address, message));
+        Ok(())
+    }
+
+    #[cfg(test)]
     pub fn messages(&self) -> &Vec<String> {
         &self.sent_messages
     }
 }
 
-impl Emailer for LogOnlyEmailer {
-    fn send_message(&mut self, address: &str, message: &str) -> Result<(), String> {
-        info!("Sending message to '{}': '{}'", address, message);
-        self.sent_messages.push(format!("<{}>::[{}]", address, message));
-        Ok(())
-    }
+pub struct Emailer {
+    pub client: Mutex<EmailClient>
 }
 
-pub fn init_emailer() -> Box<Emailer + Sync + Send> {
-    info!("Adding dummy 'LogOnlyEmailer' placeholder");
-    Box::new(LogOnlyEmailer::new())
+pub fn init_emailer() -> Emailer {
+    // TODO: config-time hook to do something smarter
+    info!("Adding dummy 'EmailClient' placeholder");
+    Emailer { client: Mutex::new(EmailClient::new()) }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn dummy_emailer() {
+        let mut emailer = EmailClient::new();
+        let sent = emailer.send_message("f@b.com", "hi");
+        assert!(sent.is_ok());
+        assert_eq!(emailer.messages().get(0).unwrap(), "<f@b.com>::[hi]");
+    }
 }

@@ -124,11 +124,8 @@ fn login(mut cookies: Cookies, user: User) -> UserCredentials {
     UserCredentials::new(user, encrypted_cookie.value().to_string())
 }
 
-
-
-#[allow(dead_code)]
-pub fn start_password_reset<E: Emailer>(
-    email: &str, db: &DbConn, emailer: &mut E
+pub fn start_password_reset(
+    email: &str, db: &DbConn, emailer: &Emailer
 ) -> Result<Option<PasswordReset>, ApiError> {
     let user = ApiError::server_error(User::by_email(&db, &email))?;
     match user {
@@ -136,14 +133,16 @@ pub fn start_password_reset<E: Emailer>(
             let reset = ApiError::server_error(PasswordReset::create(&user, db))?;
             // TODO: real message, handle failure via transaction
             let message = format!("Your password reset token is '{}'", &reset.uuid);
-            ApiError::server_error(emailer.send_message(&user.email, &message))?;
+            {
+                let mut client = ApiError::server_error(emailer.client.lock())?;
+                ApiError::server_error(client.send_message(&user.email, &message))?;
+            }
             Ok(Some(reset))
         }
         _ => Ok(None)
     }
 }
 
-#[allow(dead_code)]
 pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Result<bool, ApiError> {
     // handle potential user-caused errors first, always hash to prevent timing attacks
     ApiError::bad_request(reset.validate())?;
@@ -192,33 +191,34 @@ mod functest {
     use chrono::Duration;
     use chrono::prelude::*;
     use db::test_db;
-    use email::LogOnlyEmailer;
+    use email::init_emailer;
     use super::*;
 
     #[test]
     fn password_reset_no_user() {
         let db = test_db();
-        let mut emailer = LogOnlyEmailer::new();
+        let mut emailer = init_emailer();
         let no_user = start_password_reset("foo@bizbang", &db, &mut emailer);
         assert_eq!(no_user, Ok(None));
-        assert_eq!(emailer.messages().len(), 0);
+        assert_eq!(emailer.client.try_lock().unwrap().messages().len(), 0);
     }
 
     #[test]
     fn password_reset() {
         let db = test_db();
-        let mut emailer = LogOnlyEmailer::new();
+        let mut emailer = init_emailer();
         let user = NewUser::fake("pw_reset_flow@gmail.com").insert(&db)
             .expect("couldn't make user");
 
         // kick off the password reset flow
-        assert_eq!(emailer.messages().len(), 0);
+        assert_eq!(emailer.client.try_lock().unwrap().messages().len(), 0);
         let reset = start_password_reset(&user.email, &db, &mut emailer)
             .expect("db error creating reset").expect("didn't get reset back");
         assert_eq!(reset.user_id, user.id);
         assert!(reset.created_at < Utc::now());
         assert!(reset.created_at.signed_duration_since(Utc::now()) < Duration::seconds(3));
-        let message = emailer.messages().get(0).expect("missing message");
+        let client = emailer.client.try_lock().expect("locked emailer");
+        let message = client.messages().get(0).expect("missing message");
         let expected = format!("<pw_reset_flow@gmail.com>::[Your password reset token is '{}']", &reset.uuid);
         assert_eq!(message, &expected);
 
