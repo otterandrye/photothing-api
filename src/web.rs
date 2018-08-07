@@ -6,7 +6,7 @@ use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
 use db::{init_db_pool, DbConn, Pagination, Page};
-use email::{Emailer, init_emailer};
+use email::{Emailer, init_emailer, dummy_emailer};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
 use auth;
@@ -108,8 +108,20 @@ pub fn rocket() -> Rocket {
             };
             Ok(rocket.manage(S3Access::new(bucket, cdn_url, cdn_prefix)))
         }))
+        .attach(AdHoc::on_attach(|rocket| {
+            let email;
+            {
+                let key = rocket.config().get_str("mailgun_key");
+                let domain = rocket.config().get_str("mailgun_domain");
+                let system_email = rocket.config().get_str("system_email");
+                email = match (key, domain, system_email) {
+                    (Ok(key), Ok(domain), Ok(system_email)) => init_emailer(key, domain, system_email),
+                    _ => dummy_emailer(),
+                };
+            }
+            Ok(rocket.manage(email))
+        }))
         .manage(init_db_pool())
-        .manage(init_emailer())
         .attach(cors)
         .attach(Template::fairing())
         .mount("/", routes![admin])

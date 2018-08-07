@@ -8,8 +8,10 @@ extern crate chrono;
 extern crate dotenv;
 extern crate futures;
 #[macro_use] extern crate log;
+extern crate mailgun_v3;
 extern crate mailchecker;
 extern crate r2d2;
+extern crate reqwest;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate rocket_cors;
@@ -20,8 +22,6 @@ extern crate rusoto_s3;
 extern crate uuid;
 extern crate zxcvbn;
 
-#[cfg(test)]
-extern crate reqwest;
 #[cfg(test)]
 extern crate rand;
 

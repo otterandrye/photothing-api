@@ -191,13 +191,13 @@ mod functest {
     use chrono::Duration;
     use chrono::prelude::*;
     use db::test_db;
-    use email::init_emailer;
+    use email::dummy_emailer;
     use super::*;
 
     #[test]
     fn password_reset_no_user() {
         let db = test_db();
-        let mut emailer = init_emailer();
+        let mut emailer = dummy_emailer();
         let no_user = start_password_reset("foo@bizbang", &db, &mut emailer);
         assert_eq!(no_user, Ok(None));
         assert_eq!(emailer.client.try_lock().unwrap().messages().len(), 0);
@@ -206,7 +206,7 @@ mod functest {
     #[test]
     fn password_reset() {
         let db = test_db();
-        let mut emailer = init_emailer();
+        let mut emailer = dummy_emailer();
         let user = NewUser::fake("pw_reset_flow@gmail.com").insert(&db)
             .expect("couldn't make user");
 
