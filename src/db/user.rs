@@ -161,6 +161,7 @@ mod functest {
     use db::test_db;
     use super::*;
 
+    #[ignore]
     #[test]
     fn user_crud() {
         let db = test_db();
@@ -179,6 +180,7 @@ mod functest {
         assert!(back_to_null.subscription_expires.is_none(), "date update failed");
     }
 
+    #[ignore]
     #[test]
     fn password_reset_crud() {
         let db = test_db();
