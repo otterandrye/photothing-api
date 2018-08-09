@@ -194,6 +194,7 @@ mod functest {
     use email::dummy_emailer;
     use super::*;
 
+    #[ignore]
     #[test]
     fn password_reset_no_user() {
         let db = test_db();
@@ -203,6 +204,7 @@ mod functest {
         assert_eq!(emailer.client.try_lock().unwrap().messages().len(), 0);
     }
 
+    #[ignore]
     #[test]
     fn password_reset() {
         let db = test_db();
