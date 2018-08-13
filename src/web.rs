@@ -4,6 +4,7 @@ use rocket::{ignite, Rocket, State};
 use rocket::http::{Cookies, Method};
 use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
+use serde_json::Value;
 
 use db::{init_db_pool, DbConn, Pagination, Page};
 use email::{Emailer, init_emailer, dummy_emailer};
@@ -15,6 +16,7 @@ use admin;
 use photos;
 
 pub type Api<T> = Result<Json<T>, ApiError>;
+pub type FreeJson = Value;
 
 #[post("/login", data = "<user>")]
 fn login(
@@ -50,11 +52,11 @@ fn start_reset_password(
 }
 
 #[put("/reset_password/<uuid>", data="<user>")]
-fn reset_password(db: DbConn, user: Json<auth::UserLogin>, uuid: String) -> Api<String> {
+fn reset_password(db: DbConn, user: Json<auth::UserLogin>, uuid: String) -> Api<FreeJson> {
     match auth::handle_password_reset(user.into_inner(), &uuid, &db) {
         Err(ref e) if e.is_user_error() => Err(e.clone()),
-        Ok(true) => Ok(Json(json!({"reset": "Ok"}).to_string())),
-        _ => Ok(Json(json!({"reset": "Failed"}).to_string())),
+        Ok(true) => Ok(Json(json!({"reset": "Ok"}))),
+        _ => Ok(Json(json!({"reset": "Failed"}))),
     }
 }
 
