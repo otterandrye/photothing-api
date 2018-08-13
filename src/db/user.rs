@@ -189,6 +189,11 @@ mod functest {
         let mutable = User::for_update(&db, &user.email).expect("db").expect("found user");
         let back_to_null = mutable.edit_subscription(&db, None).expect("back to None failed");
         assert!(back_to_null.subscription_expires.is_none(), "date update failed");
+
+        let mutable = User::for_update(&db, &user.email).expect("db").expect("found user");
+        let new_pw = mutable.change_password(&db, HashedPassword(String::from("foo")))
+            .expect("change pw failed");
+        assert_eq!(new_pw.password, "foo");
     }
 
     #[ignore]

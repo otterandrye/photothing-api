@@ -51,11 +51,11 @@ fn start_reset_password(
 
 #[put("/reset_password/<uuid>", data="<user>")]
 fn reset_password(db: DbConn, user: Json<auth::UserLogin>, uuid: String) -> Api<String> {
-    let status = match auth::handle_password_reset(user.into_inner(), &uuid, &db) {
-        Ok(true) => "Ok",
-        _ => "Failed",
-    };
-    Ok(Json(json!({"reset": status}).to_string()))
+    match auth::handle_password_reset(user.into_inner(), &uuid, &db) {
+        Err(ref e) if e.is_user_error() => Err(e.clone()),
+        Ok(true) => Ok(Json(json!({"reset": "Ok"}).to_string())),
+        _ => Ok(Json(json!({"reset": "Failed"}).to_string())),
+    }
 }
 
 #[post("/upload", data = "<req>")]

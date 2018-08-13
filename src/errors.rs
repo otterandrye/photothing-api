@@ -5,7 +5,7 @@ use rocket::{Response, Request};
 use rocket::http::{ContentType, Status};
 use rocket::response::{Result as RocketResult, Responder};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct ApiError {
     status: Status,
@@ -27,6 +27,10 @@ impl<'r> Responder<'r> for ApiError {
 // for example:
 // `ApiError::bad_request(new_user.validate())?;` to return a 400 response for invalid user input
 impl ApiError {
+    pub fn is_user_error(&self) -> bool {
+        return self.status == Status::BadRequest
+    }
+
     fn message_with_status<T, E: Debug>(e: Result<T, E>, status: Status) -> Result<T, ApiError> {
         e.map_err(|e| ApiError { status, message: format!("{:?}", e) })
     }
@@ -36,7 +40,7 @@ impl ApiError {
             // These errors are always unexpected, so log an error message when they occur
             let _log = e.as_ref().map_err(|e| error!("Caught error: {:?}", e));
         }
-        ApiError::message_with_status(e, Status::BadRequest)
+        ApiError::message_with_status(e, Status::InternalServerError)
     }
 
     pub fn bad_request<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
