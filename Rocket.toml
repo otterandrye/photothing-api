@@ -1,10 +1,13 @@
 [development]
 secret_key = "y776UJ3OBPATyMB1rag+RlKQqb9Ezd8lRky6O3noF0I="
 cdn_prefix = "dev"
+app_url = "http://localhost:3000"
 
 [staging]
 secret_key = "7bU2X1BgdUTlwZxIh8PRwGwAz3puYZarrgespKAMJRk="
 cdn_prefix = "stg"
+app_url = "http://localhost:3000"
 
 [production]
 cdn_prefix = ""
+app_url = "https://photo-thing.herokuapp.com/"

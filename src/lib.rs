@@ -20,6 +20,7 @@ extern crate rusoto_core;
 extern crate rusoto_s3;
 #[macro_use] extern crate serde_json;
 extern crate uuid;
+extern crate url;
 extern crate zxcvbn;
 
 #[cfg(test)]

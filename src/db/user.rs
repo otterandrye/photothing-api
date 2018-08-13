@@ -151,8 +151,19 @@ struct NewPasswordReset {
 
 #[cfg(test)]
 impl NewUser {
-    pub fn fake(email: &str) -> NewUser {
+    pub fn fake(email: &str) -> Self {
         NewUser::new(String::from(email), HashedPassword(String::from("foobar")))
+    }
+}
+
+#[cfg(test)]
+impl PasswordReset {
+    pub fn fake(uuid: &str) -> Self {
+        PasswordReset {
+            uuid: uuid.to_owned(),
+            user_id: 1,
+            created_at: Utc::now(),
+        }
     }
 }
 

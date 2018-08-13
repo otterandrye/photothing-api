@@ -2,6 +2,7 @@
 ** 2fa
 ** reCaptcha on registration
 ** TODO password reset
+*** TODO e2e test, set up mailgun account
 ** DONE users CRUD
 ** DONE password strength check
 
@@ -14,10 +15,10 @@
 ** how to edited versions of photos interact?
 
 * configuration
-** app-host env on API
+** DONE app-host env on API
 ** DONE dev/prod CDN prefixes
 ** DONE api-host env on app
-** double check timestamp columns on database
+** DONE double check timestamp columns on database
 
 * user-facing stuff before launch
 ** marketing site

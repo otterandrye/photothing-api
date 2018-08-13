@@ -1,6 +1,7 @@
 use bcrypt::verify;
 use mailchecker;
 use rocket::http::{Cookie, Cookies};
+use url::form_urlencoded;
 
 use zxcvbn::zxcvbn as check_password;
 
@@ -131,16 +132,25 @@ pub fn start_password_reset(
     match user {
         Some(user) => {
             let reset = ApiError::server_error(PasswordReset::create(&user, db))?;
-            // TODO: real message, handle failure via transaction
-            let message = format!("Your password reset token is '{}'", &reset.uuid);
+            // TODO: handle failure via transaction
             {
                 let mut client = ApiError::server_error(emailer.client.lock())?;
+                let url = password_reset_url(&client.app_url, email, &reset);
+                let message = format!("Please reset your password at {}. This link will expire in 24 hours", url);
                 ApiError::server_error(client.send_message(&user.email, &message))?;
             }
             Ok(Some(reset))
         }
         _ => Ok(None)
     }
+}
+
+fn password_reset_url(app_url: &str, email: &str, reset: &PasswordReset) -> String {
+    let encoded: String = form_urlencoded::Serializer::new(String::new())
+        .append_pair("email", email)
+        .append_pair("id", &reset.uuid)
+        .finish();
+    format!("{}/password_reset?{}", app_url, encoded)
 }
 
 pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Result<bool, ApiError> {
@@ -183,6 +193,13 @@ mod test {
 
         let ascii_pw = UserLogin { email: String::from("foo@gmail.com"), password: String::from("hàµyKµ3øã^^³½ä}A5öý9×¿aûiëP}·") };
         assert!(ascii_pw.validate().is_ok());
+    }
+
+    #[test]
+    fn pw_reset_url() {
+        let reset = PasswordReset::fake("foo");
+        let url = password_reset_url("APP_HOST", "nathan@chemist.com", &reset);
+        assert_eq!(url, "APP_HOST/password_reset?email=nathan%40chemist.com&id=foo");
     }
 }
 
