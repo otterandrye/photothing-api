@@ -238,8 +238,8 @@ mod functest {
         assert!(reset.created_at.signed_duration_since(Utc::now()) < Duration::seconds(3));
         let client = emailer.client.try_lock().expect("locked emailer");
         let message = client.messages().get(0).expect("missing message");
-        let expected = format!("<pw_reset_flow@gmail.com>::[Your password reset token is '{}']", &reset.uuid);
-        assert_eq!(message, &expected);
+        let expected = format!("<pw_reset_flow@gmail.com>::[Please reset your password at /password_reset?email=pw_reset_flow%40gmail.com&id={}", &reset.uuid);
+        assert!(message.starts_with(&expected), format!("Saw msg: '{}'", &message));
 
         let new_pw = UserLogin {
             email: user.email.clone(),
