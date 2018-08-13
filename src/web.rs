@@ -43,8 +43,8 @@ fn start_reset_password(
     db: DbConn, emailer: State<Emailer>, email: String,
 ) -> Api<String> {
     let status = match auth::start_password_reset(&email, &db, emailer.inner()) {
-        Ok(Some(_)) => "Ok",
-        _ => "Failed",
+        Ok(_) => "Ok",
+        Err(_) => "Failed",
     };
     Ok(Json(json!({"reset": status}).to_string()))
 }

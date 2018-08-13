@@ -128,6 +128,7 @@ fn login(mut cookies: Cookies, user: User) -> UserCredentials {
 pub fn start_password_reset(
     email: &str, db: &DbConn, emailer: &Emailer
 ) -> Result<Option<PasswordReset>, ApiError> {
+    info!("Starting password reset for '{}'", &email);
     let user = ApiError::server_error(User::by_email(&db, &email))?;
     match user {
         Some(user) => {
@@ -154,6 +155,7 @@ fn password_reset_url(app_url: &str, email: &str, reset: &PasswordReset) -> Stri
 }
 
 pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Result<bool, ApiError> {
+    info!("Handling reset for '{}' with uuid='{}'", &reset.email, uuid);
     // handle potential user-caused errors first, always hash to prevent timing attacks
     ApiError::bad_request(reset.validate())?;
     let hashed = ApiError::bad_request(hash_password(&reset.password))?;
