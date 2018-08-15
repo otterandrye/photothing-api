@@ -6,7 +6,7 @@ use rocket_contrib::{Json, Template};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 use serde_json::Value;
 
-use db::{init_db_pool, DbConn, Pagination, Page};
+use db::{init_db_pool, DbConn, Pagination};
 use email::{Emailer, init_emailer, dummy_emailer};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
@@ -14,6 +14,8 @@ use auth;
 use auth::guards::*;
 use admin;
 use photos;
+
+pub use db::Page;
 
 pub type Api<T> = Result<Json<T>, ApiError>;
 pub type FreeJson = Value;

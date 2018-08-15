@@ -72,8 +72,8 @@ impl<'f> FromForm<'f> for Pagination {
 }
 
 // Struct for returning a page of results from the DB
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, Clone))]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(test, derive(Clone))]
 pub struct Page<T> {
     pub key: Option<i32>,
     pub next_key: Option<i32>,
