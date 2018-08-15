@@ -1,3 +1,4 @@
+pub mod album;
 mod pagination;
 pub mod photo;
 pub mod user;

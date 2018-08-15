@@ -1,7 +1,26 @@
 table! {
+    album_membership (photo_id, album_id) {
+        photo_id -> Int4,
+        album_id -> Int4,
+        ordering -> Nullable<Int2>,
+        caption -> Nullable<Text>,
+        updated_at -> Timestamptz,
+    }
+}
+
+table! {
     password_resets (uuid) {
         uuid -> Varchar,
         user_id -> Int4,
+        created_at -> Timestamptz,
+    }
+}
+
+table! {
+    photo_albums (id) {
+        id -> Int4,
+        user_id -> Int4,
+        name -> Nullable<Text>,
         created_at -> Timestamptz,
     }
 }
@@ -39,12 +58,17 @@ table! {
     }
 }
 
+joinable!(album_membership -> photo_albums (album_id));
+joinable!(album_membership -> photos (photo_id));
 joinable!(password_resets -> users (user_id));
+joinable!(photo_albums -> users (user_id));
 joinable!(photo_attrs -> photos (photo_id));
 joinable!(photos -> users (owner));
 
 allow_tables_to_appear_in_same_query!(
+    album_membership,
     password_resets,
+    photo_albums,
     photo_attrs,
     photos,
     users,

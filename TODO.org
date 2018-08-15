@@ -12,7 +12,8 @@
 ** DONE pagination on photo endpoint
 
 * design
-** how to edited versions of photos interact?
+** how do edited versions of photos interact?
+*** it's a graph, links are 'edit' or 'render'
 
 * configuration
 ** DONE app-host env on API
@@ -28,10 +29,11 @@
 ** analytics on site
 *** DONE matomo site
 *** DONE matomo account for Marcus
-** 'album' concept (photo attribute)
-*** TODO think about ordering inside albums
+** DONE 'album' concept (photo attribute)
+*** DONE think about ordering inside albums
+*** DONE metadata - caption, transition after photo, etc
 ** photo gallery
-** list of photos
+** TODO list of photos
 
 * Admin dashboard w/ information about site
 ** how much space are users using?
