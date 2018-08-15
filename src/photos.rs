@@ -13,6 +13,7 @@ use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
 #[derive(Serialize, Debug, PartialEq)]
 pub struct Photo {
     uuid: String,
+    url: String,
     present: bool,
     #[serde(with = "ts_seconds")]
     created_at: DateTime<Utc>,
@@ -20,13 +21,17 @@ pub struct Photo {
 }
 
 impl Photo {
-    fn new(photo: DbPhoto, attributes: Vec<PhotoAttr>) -> Photo {
+    fn new(user: &User, s3: &S3Access, photo: DbPhoto, attributes: Vec<PhotoAttr>) -> Photo {
         let mut attr_map = HashMap::new();
         for attr in attributes.into_iter() {
             attr_map.insert(attr.key, attr.value);
         }
+
+        let url = s3.cdn_url_of_entity(&user.uuid, &photo.uuid);
+
         Photo {
             uuid: photo.uuid,
+            url,
             present: photo.present.unwrap_or(false),
             created_at: photo.created_at,
             attributes: attr_map,
@@ -53,7 +58,7 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
         let filename_attr = NewPhotoAttr::new(&photo, filename);
         let filename_attr = filename_attr.insert(db)?;
 
-        let photo = Photo::new(photo, vec![filename_attr]);
+        let photo = Photo::new(user, s3, photo, vec![filename_attr]);
         let upload = sign_upload(s3, &user.uuid, upload, &photo.uuid);
 
         Ok(PendingUpload { photo, upload })
@@ -61,9 +66,9 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
     ApiError::server_error(txn)
 }
 
-pub fn user_photos(user: &User, db: &DbConn, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
+pub fn user_photos(user: &User, db: &DbConn, s3: &S3Access, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
     let page = ApiError::server_error(DbPhoto::by_user(db, user, pagination))?;
-    Ok(page.map(|(p, a)| Photo::new(p, a)))
+    Ok(page.map(|(p, a)| Photo::new(user, s3, p, a)))
 }
 
 #[cfg(test)]
@@ -93,7 +98,7 @@ mod test {
         let pending_upload = create_photo(&user, &db, &s3, upload)?;
         assert!(!pending_upload.photo.present);
 
-        let photos = user_photos(&user, &db, Pagination::first())?;
+        let photos = user_photos(&user, &db, &s3, Pagination::first())?;
         assert_eq!(photos.items, vec![pending_upload.photo]);
         assert_eq!(photos.remaining, 0);
         assert_eq!(photos.key, None);
@@ -103,7 +108,7 @@ mod test {
         }
 
         let key = photos.next_key.unwrap();
-        let second_page = user_photos(&user, &db, Pagination::page(key))?;
+        let second_page = user_photos(&user, &db, &s3, Pagination::page(key))?;
         assert!(second_page.items.is_empty());
         assert_eq!(second_page.remaining, 0);
         assert_eq!(second_page.key, Some(key), "user-supplied key");
@@ -113,13 +118,13 @@ mod test {
             let upload = UploadRequest::fake();
             create_photo(&user, &db, &s3, upload)?;
         }
-        let photos = user_photos(&user, &db, Pagination::first())?;
+        let photos = user_photos(&user, &db, &s3, Pagination::first())?;
         assert_eq!(photos.items.len() as i64, Pagination::first().per_page);
         assert_eq!(photos.remaining, 21); // 51 uploaded, got first 30
 
         let mut small_pg = Pagination::first();
         small_pg.per_page = 5;
-        let fewer = user_photos(&user, &db, small_pg)?;
+        let fewer = user_photos(&user, &db, &s3, small_pg)?;
         assert_eq!(fewer.items.len() as i64, small_pg.per_page);
         assert_eq!(fewer.remaining, 46); // 51 uploaded, asked for 5
 

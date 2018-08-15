@@ -22,6 +22,14 @@ impl S3Access {
         let client = S3Client::new(region.clone());
         S3Access { bucket, region, creds, client, cdn_url, cdn_prefix }
     }
+
+    pub fn cdn_url_of_entity(&self, directory: &str, id: &str) -> String {
+        self.cdn_url_of_destination(&get_destination(&self, &directory, id))
+    }
+
+    pub fn cdn_url_of_destination(&self, destination: &str) -> String {
+        format!("https://{}/{}", self.cdn_url, destination)
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -55,7 +63,7 @@ pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str)
         ..Default::default()
     };
     let url = put_req.get_presigned_url(&s3.region, &s3.creds);
-    let get_url = format!("https://{}/{}", &s3.cdn_url, destination);
+    let get_url = s3.cdn_url_of_destination(&destination);
 
     UploadResponse {
         url,

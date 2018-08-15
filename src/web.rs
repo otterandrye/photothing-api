@@ -70,13 +70,13 @@ fn sign_user_upload(
 }
 
 #[get("/photos")]
-fn get_photos(user: User, db: DbConn) -> Api<Page<photos::Photo>> {
-    get_photos_page(user, db, Pagination::first())
+fn get_photos(user: User, s3: State<S3Access>, db: DbConn) -> Api<Page<photos::Photo>> {
+    get_photos_page(user, s3, db, Pagination::first())
 }
 
 #[get("/photos?<page>")]
-fn get_photos_page(user: User, db: DbConn, page: Pagination) -> Api<Page<photos::Photo>> {
-    let photos = photos::user_photos(&user, &db, page)?;
+fn get_photos_page(user: User, s3: State<S3Access>, db: DbConn, page: Pagination) -> Api<Page<photos::Photo>> {
+    let photos = photos::user_photos(&user, &db, s3.inner(), page)?;
     Ok(Json(photos))
 }
 
