@@ -117,11 +117,13 @@ pub fn rocket() -> Rocket {
             {
                 let key = rocket.config().get_str("mailgun_key");
                 let domain = rocket.config().get_str("mailgun_domain");
-                let system_email = rocket.config().get_str("system_email");
                 let app_url = rocket.config().get_str("app_url").expect("missing app url");
-                email = match (key, domain, system_email) {
-                    (Ok(key), Ok(domain), Ok(system_email))  =>
-                        init_emailer(key, domain, system_email, app_url),
+
+                email = match (key, domain) {
+                    (Ok(key), Ok(domain))  => {
+                        let system_email = format!("noreply@{}", &domain);
+                        init_emailer(key, domain, &system_email, app_url)
+                    },
                     _ => dummy_emailer(),
                 };
             }
