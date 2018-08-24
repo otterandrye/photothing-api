@@ -17,7 +17,7 @@ pub struct S3Access {
 impl S3Access {
     pub fn new(bucket: String, cdn_url: String, cdn_prefix: Option<String>) -> S3Access {
         let region = Region::default(); // reads from environment var
-        let creds = EnvironmentProvider.credentials().wait()
+        let creds = EnvironmentProvider::default().credentials().wait()
             .expect("couldn't build AWS credentials");
         let client = S3Client::new(region.clone());
         S3Access { bucket, region, creds, client, cdn_url, cdn_prefix }
@@ -131,7 +131,7 @@ mod test {
     #[ignore]
     fn upload_integration_test() {
         dotenv::dotenv().ok();
-        let creds = EnvironmentProvider.credentials().wait()
+        let creds = EnvironmentProvider::default().credentials().wait()
             .expect("couldn't build AWS credentials");
         let bucket = String::from("photothing-heroku-dev");
         let cdn_url = env::var("ROCKET_CDN_URL").expect("missing cdn url");
