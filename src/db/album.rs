@@ -43,9 +43,12 @@ impl Album {
         Ok(albums)
     }
 
-    pub fn by_id(db: &PgConnection, album_id: i32) -> Result<Option<Album>, Error> {
+    pub fn by_id(db: &PgConnection, user: &User, album_id: i32) -> Result<Option<Album>, Error> {
         use db::schema::photo_albums::dsl::*;
-        photo_albums.filter(id.eq(album_id)).first(db).optional()
+        photo_albums
+            .filter(id.eq(album_id))
+            .filter(user_id.eq(user.id))
+            .first(db).optional()
     }
 
     pub fn add_photos(&self, db: &PgConnection, photos: &Vec<i32>) -> Result<usize, Error> {

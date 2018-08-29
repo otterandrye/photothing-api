@@ -82,6 +82,10 @@ pub struct Page<T> {
 }
 
 impl<T> Page<T> {
+    pub fn empty() -> Self {
+        Page { key: None, next_key: None, remaining: 0, items: vec![] }
+    }
+
     pub fn map<F, U>(self, mapper: F) -> Page<U>
         where F: Fn(T) -> U
     {

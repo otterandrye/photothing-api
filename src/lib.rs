@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 #![allow(proc_macro_derive_resolution_fallback)] // diesel warning, https://github.com/rust-lang/rust/issues/50504
 
@@ -27,6 +27,7 @@ extern crate zxcvbn;
 extern crate rand;
 
 mod admin;
+mod albums;
 mod auth;
 pub mod db;
 mod email;

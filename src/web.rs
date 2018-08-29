@@ -13,6 +13,7 @@ use s3::{S3Access, UploadRequest};
 use auth;
 use auth::guards::*;
 use admin;
+use albums;
 use photos;
 
 pub use db::Page;
@@ -82,6 +83,36 @@ fn get_photos_page(user: User, s3: State<S3Access>, db: DbConn, page: Pagination
     Ok(Json(photos))
 }
 
+#[get("/albums")]
+fn fetch_user_albums(user: User, db: DbConn) -> Api<Page<albums::Album>> {
+    let user_albums = albums::user_albums(&db, &user)?;
+    Ok(Json(user_albums))
+}
+
+#[post("/albums?<details>")]
+fn create_album(user: User, db: DbConn, details: albums::NewAlbum) -> Api<albums::Album> {
+    let album = albums::create_album(&db, &user, details)?;
+    Ok(Json(album))
+}
+
+#[get("/albums/<id>?<page>")]
+fn fetch_album(user: User, db: DbConn, id: i32, page: Pagination) -> Api<albums::Album> {
+    let album = albums::fetch_album(&db, &user, id, page)?;
+    Ok(Json(album))
+}
+
+#[put("/albums/<id>/photos", data = "<photos>")]
+fn add_photos_to_album(user: User, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
+    let album = albums::add_photos_to_album(&db, &user, id, photos.into_inner())?;
+    Ok(Json(album))
+}
+
+#[delete("/albums/<id>/photos", data = "<photos>")]
+fn remove_photos_from_album(user: User, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
+    let album = albums::remove_photos_from_album(&db, &user, id, photos.into_inner())?;
+    Ok(Json(album))
+}
+
 #[get("/admin")]
 fn admin(_admin: Admin, s3: State<S3Access>, db: DbConn) -> Result<Template, ApiError> {
     let context = admin::fetch_dashboard(&s3.inner(), &db)?;
@@ -140,7 +171,8 @@ pub fn rocket() -> Rocket {
         .mount("/", routes![admin])
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password,
-            sign_user_upload, get_photos, get_photos_page
+            sign_user_upload, get_photos, get_photos_page,
+            fetch_user_albums, create_album, fetch_album, add_photos_to_album, remove_photos_from_album
         ])
 }
 

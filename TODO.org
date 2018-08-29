@@ -2,14 +2,16 @@
 ** 2fa
 ** reCaptcha on registration
 ** TODO password reset
-*** TODO e2e test, set up mailgun account
+*** TODO e2e test
 ** DONE users CRUD
 ** DONE password strength check
+** email verification
 
 * API endpoints
 ** DONE sign-upload from howto
 ** DONE put upload behind subscription gate
 ** DONE pagination on photo endpoint
+** TODO photo album CRUD
 
 * design
 ** how do edited versions of photos interact?
