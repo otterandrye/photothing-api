@@ -1,33 +1,17 @@
+// for every integration test
 extern crate photothing_api;
+extern crate diesel;
+extern crate dotenv;
 #[macro_use] extern crate serde_json;
 extern crate rocket;
 
-use serde_json::Value;
-use rocket::local::{Client, LocalResponse};
+mod utils;
+
+use rocket::local::Client;
 use rocket::http::{Cookie, ContentType, Header, Status};
+use serde_json::Value;
 
-fn post<'a, 'b, 'c>(client: &'a Client, endpoint: &'b str, body: &'c serde_json::Value) -> LocalResponse<'a> {
-    client.post(endpoint.to_string())
-        .header(ContentType::JSON)
-        .body(format!("{}", body))
-        .dispatch()
-}
-
-fn assert_user_cookie<'a, 'b>(res: &'a LocalResponse, expected: bool) -> Option<String> {
-    for h in res.headers().iter() {
-        if h.name() == "Set-Cookie" {
-            let found = h.value().starts_with("u=") && !h.value().starts_with("u=; Path=/;");
-            assert_eq!(found, expected, "login cookie in wrong state (actual, expected)");
-            if found {
-                return Some(h.value().to_string());
-            } else {
-                return None;
-            }
-        }
-    }
-    assert!(!expected);
-    None
-}
+use utils::web::{post, assert_user_cookie};
 
 #[test]
 #[ignore]
@@ -35,9 +19,9 @@ fn user_registration_login() {
     let client = Client::new(photothing_api::web::rocket()).expect("rocket launched");
 
     // http helper methods
-    let login = |body: &serde_json::Value|    post(&client, "/api/login", body);
-    let logout = ||                           post(&client, "/api/logout", &json!({}));
-    let register = |body: &serde_json::Value| post(&client, "/api/register", body);
+    let login = |body: &serde_json::Value|    post(&client, "/api/login", body, None);
+    let logout = ||                           post(&client, "/api/logout", &json!({}), None);
+    let register = |body: &serde_json::Value| post(&client, "/api/register", body, None);
 
     let email = "nathan@chemist.com";
     let password = "billy goat frialator";
