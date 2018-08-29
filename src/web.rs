@@ -83,9 +83,9 @@ fn get_photos_page(user: User, s3: State<S3Access>, db: DbConn, page: Pagination
     Ok(Json(photos))
 }
 
-#[get("/albums")]
-fn fetch_user_albums(user: User, db: DbConn) -> Api<Page<albums::Album>> {
-    let user_albums = albums::user_albums(&db, &user)?;
+#[get("/albums?<page>")]
+fn fetch_user_albums(user: User, db: DbConn, page: Pagination) -> Api<Page<albums::Album>> {
+    let user_albums = albums::user_albums(&db, &user, page)?;
     Ok(Json(user_albums))
 }
 
@@ -122,7 +122,7 @@ fn admin(_admin: Admin, s3: State<S3Access>, db: DbConn) -> Result<Template, Api
 #[get("/me")]
 fn me(user: User) -> Api<auth::UserResponse> {
     Ok(Json(auth::UserResponse::new(user)))
-} 
+}
 
 // Main entry that creates the web application, connects to the database and binds the web routes
 pub fn rocket() -> Rocket {

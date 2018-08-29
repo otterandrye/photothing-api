@@ -72,7 +72,7 @@ impl<'f> FromForm<'f> for Pagination {
 }
 
 // Struct for returning a page of results from the DB
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[cfg_attr(test, derive(Clone))]
 pub struct Page<T> {
     pub key: Option<i32>,

@@ -60,8 +60,21 @@ impl Album {
             .collect();
         let inserted = diesel::insert_into(album_membership)
             .values(&id_pairs)
+            .on_conflict_do_nothing()
             .execute(db)?;
         Ok(inserted)
+    }
+
+    pub fn remove_photos(&self, db: &PgConnection, photos: &Vec<i32>) -> Result<usize, Error> {
+        use db::schema::album_membership::dsl::*;
+        for p_id in photos.iter() {
+            diesel::delete(
+                album_membership
+                    .filter(album_id.eq(self.id))
+                    .filter(photo_id.eq(p_id))
+            ).execute(db)?;
+        }
+        Ok(photos.len())
     }
 
     pub fn get_photos(&self, db: &PgConnection, page: Pagination) -> Result<Page<AlbumPhoto>, Error> {

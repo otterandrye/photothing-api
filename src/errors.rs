@@ -47,6 +47,13 @@ impl ApiError {
         ApiError::message_with_status(e, Status::BadRequest)
     }
 
+    pub fn not_found<T>(opt: Option<T>, message: String) -> Result<T, ApiError> {
+        match opt {
+            Some(val) => Ok(val),
+            None => Err(ApiError { status: Status::NotFound, message })
+        }
+    }
+
     pub fn unauthorized() -> ApiError {
         ApiError {
             status: Status::Unauthorized,

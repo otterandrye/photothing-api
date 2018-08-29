@@ -11,6 +11,7 @@ use ::util::uuid;
 
 // Main Photo object, keeps track of whether the file exists on S3 and who uploaded it
 #[derive(Queryable, Associations, Identifiable)]
+#[cfg_attr(test, derive(Debug))]
 #[belongs_to(User, foreign_key = "owner")]
 pub struct Photo {
     pub id: i32,
