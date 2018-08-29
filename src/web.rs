@@ -35,7 +35,7 @@ fn logout(_user: User, cookies: Cookies) -> Api<String> {
 }
 
 #[post("/register", data = "<user>")]
-fn register(db: DbConn, user: Json<auth::UserLogin>) -> Api<auth::UserCreateResponse> {
+fn register(db: DbConn, user: Json<auth::UserLogin>) -> Api<auth::UserResponse> {
     let user = auth::create_user(user.into_inner(), &db)?;
     Ok(Json(user))
 }
@@ -85,6 +85,11 @@ fn admin(_admin: Admin, s3: State<S3Access>, db: DbConn) -> Result<Template, Api
     let context = admin::fetch_dashboard(&s3.inner(), &db)?;
     Ok(Template::render("admin", &context))
 }
+
+#[get("/me")]
+fn me(user: User) -> Api<auth::UserResponse> {
+    Ok(Json(auth::UserResponse::new(user)))
+} 
 
 // Main entry that creates the web application, connects to the database and binds the web routes
 pub fn rocket() -> Rocket {

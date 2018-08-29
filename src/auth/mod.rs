@@ -46,12 +46,20 @@ impl UserLogin {
 }
 
 #[derive(Serialize, Debug)]
-pub struct UserCreateResponse {
+pub struct UserResponse {
     email: String,
 }
 
+impl UserResponse {
+    pub fn new(user: User) -> UserResponse {
+        UserResponse {
+            email: user.email,
+        }
+    }
+}
+
 // Create a new user account
-pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserCreateResponse, ApiError> {
+pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserResponse, ApiError> {
     let email = new_user.email.clone();
 
     ApiError::bad_request(new_user.validate())?;
@@ -63,10 +71,10 @@ pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserCreateRespons
     // Always say "registration accepted, please log in now" regardless of status
     // e.g. if there's an error because an email address is already in use don't tell the user
     match user.insert(db) {
-        Ok(user) => Ok(UserCreateResponse { email: user.email }),
+        Ok(user) => Ok(UserResponse::new(user)),
         Err(e) => {
             error!("Error inserting new user ({}): {}", email, e);
-            Ok(UserCreateResponse { email })
+            Ok(UserResponse { email })
         }
     }
 }
