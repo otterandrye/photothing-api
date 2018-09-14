@@ -12,7 +12,8 @@
 ** DONE put upload behind subscription gate
 ** DONE pagination on photo endpoint
 ** DONE photo album CRUD
-** TODO decorate returned album photos appropriately
+** DONE decorate returned album photos appropriately
+** published album API
 
 * design
 ** how do edited versions of photos interact?

@@ -96,20 +96,20 @@ fn create_album(user: User, db: DbConn, details: albums::NewAlbum) -> Api<albums
 }
 
 #[get("/albums/<id>?<page>")]
-fn fetch_album(user: User, db: DbConn, id: i32, page: Pagination) -> Api<albums::Album> {
-    let album = albums::fetch_album(&db, &user, id, page)?;
+fn fetch_album(user: User, s3: State<S3Access>, db: DbConn, id: i32, page: Pagination) -> Api<albums::Album> {
+    let album = albums::fetch_album(&db, &user, s3.inner(), id, page)?;
     Ok(Json(album))
 }
 
 #[put("/albums/<id>/photos", data = "<photos>")]
-fn add_photos_to_album(user: User, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
-    let album = albums::add_photos_to_album(&db, &user, id, photos.into_inner())?;
+fn add_photos_to_album(user: User, s3: State<S3Access>, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
+    let album = albums::add_photos_to_album(&db, &user, s3.inner(), id, photos.into_inner())?;
     Ok(Json(album))
 }
 
 #[delete("/albums/<id>/photos", data = "<photos>")]
-fn remove_photos_from_album(user: User, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
-    let album = albums::remove_photos_from_album(&db, &user, id, photos.into_inner())?;
+fn remove_photos_from_album(user: User, s3: State<S3Access>, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
+    let album = albums::remove_photos_from_album(&db, &user, s3.inner(), id, photos.into_inner())?;
     Ok(Json(album))
 }
 

@@ -4,21 +4,24 @@ use db::user::User;
 use db::album::Album as DbAlbum;
 use db::album::AlbumMembership;
 use db::photo::Photo as DbPhoto;
+use db::photo::PhotoAttr;
 use errors::ApiError;
+use photos::Photo;
+use s3::S3Access;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct AlbumEntry {
-    photo: i32, // TODO: figure out how this should work to get to a user photo
+    pub photo: Photo,
     ordering: Option<i16>,
-    caption: Option<String>,
+    pub caption: Option<String>,
     updated_at: DateTime<Utc>
 }
 
 impl AlbumEntry {
-    fn new(photo: DbPhoto, album: AlbumMembership) -> Self {
+    fn new(user: &User, s3: &S3Access, photo: DbPhoto, album: AlbumMembership, attrs: Vec<PhotoAttr>) -> Self {
         AlbumEntry {
-            photo: photo.id,
+            photo: Photo::new(user, s3, photo, attrs),
             ordering: album.ordering,
             caption: album.caption,
             updated_at: album.updated_at,
@@ -64,25 +67,25 @@ pub fn create_album(db: &DbConn, user: &User, details: NewAlbum) -> AlbumResult 
     Ok(Album::new(album, Page::empty()))
 }
 
-pub fn fetch_album(db: &DbConn, user: &User, id: i32, page: Pagination) -> AlbumResult {
+pub fn fetch_album(db: &DbConn, user: &User, s3: &S3Access, id: i32, page: Pagination) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
-    load_photos_page(db, album, page)
+    load_photos_page(user, s3, db, album, page)
 }
 
 pub fn add_photos_to_album(
-    db: &DbConn, user: &User, id: i32, photo_ids: Vec<i32>
+    db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
     ApiError::server_error(album.add_photos(&db, &photo_ids))?;
-    load_photos(&db, album)
+    load_photos(user, s3, &db, album)
 }
 
 pub fn remove_photos_from_album(
-    db: &DbConn, user: &User, id: i32, photo_ids: Vec<i32>
+    db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
     ApiError::server_error(album.remove_photos(&db, &photo_ids))?;
-    load_photos(&db, album)
+    load_photos(user, s3, &db, album)
 }
 
 pub fn user_albums(db: &DbConn, user: &User, page: Pagination) -> Result<Page<Album>, ApiError> {
@@ -96,13 +99,16 @@ fn fetch_db_album(db: &DbConn, user: &User, id: i32) -> Result<DbAlbum, ApiError
     ApiError::not_found(album, format!("could not find album with id={}", id))
 }
 
-fn load_photos(db: &DbConn, album: DbAlbum) -> AlbumResult {
-    load_photos_page(db, album, Pagination::first())
+fn load_photos(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum) -> AlbumResult {
+    load_photos_page(user, s3, db, album, Pagination::first())
 }
 
-fn load_photos_page(db: &DbConn, album: DbAlbum, page: Pagination) -> AlbumResult {
+fn load_photos_page(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum, page: Pagination) -> AlbumResult {
     let photos = ApiError::server_error(album.get_photos(db, page))?;
-    let photos = photos.map(|(a, p)| AlbumEntry::new(p, a));
+    // use a closure to destructure the :( return type we get from the db code and curry the
+    // s3 + user params
+    let decorated_photo = |(p, m, a)| AlbumEntry::new(user, s3, p, m, a);
+    let photos = photos.map(decorated_photo);
     Ok(Album::new(album, photos))
 }
 
@@ -118,6 +124,7 @@ mod functest {
         let db = test_db();
         let user = NewUser::fake("album_crud@gmail.com").insert(&db)
             .expect("couldn't make user");
+        let s3 = S3Access::new("fake_bucket".into(), "foo.com".into(), None);
 
         let name = Some("baby's first album".to_owned());
         let album = create_album(&db, &user, NewAlbum { name: name.clone() })
@@ -131,31 +138,31 @@ mod functest {
         assert_eq!(by_user.items.len(), 1);
         assert_eq!(&album, by_user.items.get(0).unwrap());
 
-        let by_id = fetch_album(&db, &user, album.id, Pagination::first())
+        let by_id = fetch_album(&db, &user, &s3, album.id, Pagination::first())
             .expect("couldn't fetch album by id");
         assert_eq!(&album, &by_id);
 
-        fetch_album(&db, &user, 392390, Pagination::first())
+        fetch_album(&db, &user, &s3, 392390, Pagination::first())
             .expect_err("got album back for nonsense id");
 
-        add_photos_to_album(&db, &user, album.id, vec![32018])
+        add_photos_to_album(&db, &user, &s3, album.id, vec![32018])
             .expect_err("can't add nonsense photo id to album");
 
         let photo = NewPhoto::new(&user);
         let photo = photo.insert(&db).expect("failed to insert photo");
-        let album = add_photos_to_album(&db, &user, album.id, vec![photo.id])
+        let album = add_photos_to_album(&db, &user, &s3, album.id, vec![photo.id])
             .expect("couldn't add photo to album");
         assert_eq!(album.photos.items.len(), 1, "didn't add photo");
 
-        let album = add_photos_to_album(&db, &user, album.id, vec![photo.id])
+        let album = add_photos_to_album(&db, &user, &s3, album.id, vec![photo.id])
             .expect("adding same photo again doesn't error out");
         assert_eq!(album.photos.items.len(), 1);
 
-        let noop_remove = remove_photos_from_album(&db, &user, album.id, vec![3002101])
+        let noop_remove = remove_photos_from_album(&db, &user, &s3, album.id, vec![3002101])
             .expect("got err when removing non-existent photos from album");
         assert_eq!(&album, &noop_remove);
 
-        let album = remove_photos_from_album(&db, &user, album.id, vec![photo.id])
+        let album = remove_photos_from_album(&db, &user, &s3, album.id, vec![photo.id])
             .expect("couldn't remove photo from album");
         assert_eq!(album.photos.items.len(), 0, "didn't remove photo");
     }

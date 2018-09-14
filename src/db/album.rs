@@ -6,7 +6,7 @@ use diesel::prelude::*;
 
 use db::pagination::{Paginate, Pagination, Page};
 use db::user::User;
-use db::photo::Photo;
+use db::photo::{Photo, PhotoAttr};
 use db::schema::{photo_albums, album_membership};
 
 #[derive(Queryable, Associations, Identifiable)]
@@ -27,6 +27,7 @@ struct NewAlbum<'a> {
 }
 
 type AlbumPhoto = (AlbumMembership, Photo);
+type AlbumPhotoWithAttrs = (Photo, AlbumMembership, Vec<PhotoAttr>);
 
 impl Album {
     pub fn create(db: &PgConnection, user: &User, album_name: Option<&str>) -> Result<Album, Error> {
@@ -77,15 +78,29 @@ impl Album {
         Ok(photos.len())
     }
 
-    pub fn get_photos(&self, db: &PgConnection, page: Pagination) -> Result<Page<AlbumPhoto>, Error> {
+    pub fn get_photos(&self, db: &PgConnection, page: Pagination) -> Result<Page<AlbumPhotoWithAttrs>, Error> {
         use db::schema::photos::dsl::photos;
-        // TODO: figure out how to get photo attributes here too
         // TODO: figure out how to order on the album membership 'ordering' column rather than id
         let album_photos = AlbumMembership::belonging_to(self)
             .inner_join(photos)
             .paginate(page)
             .load_and_count_pages::<AlbumPhoto>(db)?;
-        Ok(album_photos)
+
+        let (membership, db_photos): (Vec<AlbumMembership>, Vec<Photo>) = album_photos.items.into_iter().unzip();
+
+        // I believe this is running something like a 'SELECT WHERE id IN (...)' to get the attrs
+        let attributes: Vec<Vec<PhotoAttr>> = PhotoAttr::belonging_to(&db_photos)
+            .load(db)?
+            .grouped_by(&db_photos);
+        let zipped_photos = izip!(db_photos, membership, attributes).collect();
+
+        // TODO: it feels stupid to have to rebuild the Page because we partially moved photos
+        // from it, but the `belonging_to` API seems to need Vec<Photo> not Vec<&Photo> :(
+        Ok(Page {
+            key: album_photos.key,
+            next_key: album_photos.next_key,
+            remaining: album_photos.remaining,
+            items: zipped_photos })
     }
 }
 

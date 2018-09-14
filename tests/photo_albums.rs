@@ -54,7 +54,7 @@ fn photo_albums() {
     {
         let mut res = get_photos();
         assert_eq!(res.status(), Status::Ok);
-        let empty_photos: Page<Value> = serde_json::from_slice(&res.body_bytes().expect("body")).expect("server JSON valid");
+        let empty_photos: Page<Photo> = serde_json::from_slice(&res.body_bytes().expect("body")).expect("server JSON valid");
         assert!(empty_photos.items.is_empty());
         assert_eq!(empty_photos.remaining, 0);
         assert!(empty_photos.next_key.is_none());
@@ -91,6 +91,12 @@ fn photo_albums() {
     let album: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
     assert!(album.photos.is_empty());
     assert_eq!(album.name, Some(String::from("baby's first @lbum")));
+    for entry in album.photos.items.iter() {
+        assert!(entry.caption.is_none(), "no caption");
+        let filename = entry.photo.attributes.get("filename").expect("missing filename");
+        assert!(filename.starts_with("pic-"), "weird filename");
+    }
+
     let mut res = add_photos(album.id, photo_ids.clone());
     let populated_album: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
     assert_eq!(album.id, populated_album.id, "right album added to");

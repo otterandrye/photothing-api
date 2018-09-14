@@ -18,11 +18,11 @@ pub struct Photo {
     present: bool,
     #[serde(with = "ts_seconds")]
     created_at: DateTime<Utc>,
-    attributes: HashMap<String, String>,
+    pub attributes: HashMap<String, String>,
 }
 
 impl Photo {
-    fn new(user: &User, s3: &S3Access, photo: DbPhoto, attributes: Vec<PhotoAttr>) -> Photo {
+    pub fn new(user: &User, s3: &S3Access, photo: DbPhoto, attributes: Vec<PhotoAttr>) -> Photo {
         let mut attr_map = HashMap::new();
         for attr in attributes.into_iter() {
             attr_map.insert(attr.key, attr.value);
