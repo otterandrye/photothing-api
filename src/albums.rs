@@ -6,7 +6,7 @@ use db::album::AlbumMembership;
 use db::photo::Photo as DbPhoto;
 use errors::ApiError;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct AlbumEntry {
     photo: i32, // TODO: figure out how this should work to get to a user photo
@@ -26,7 +26,7 @@ impl AlbumEntry {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Album {
     pub id: i32,

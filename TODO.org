@@ -11,7 +11,8 @@
 ** DONE sign-upload from howto
 ** DONE put upload behind subscription gate
 ** DONE pagination on photo endpoint
-** TODO photo album CRUD
+** DONE photo album CRUD
+** TODO decorate returned album photos appropriately
 
 * design
 ** how do edited versions of photos interact?

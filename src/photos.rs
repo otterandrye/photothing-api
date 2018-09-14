@@ -10,8 +10,9 @@ use errors::ApiError;
 use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
 
 // User-facing photo structure
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Photo {
+    pub id: i32,
     uuid: String,
     url: String,
     present: bool,
@@ -30,6 +31,7 @@ impl Photo {
         let url = s3.cdn_url_of_entity(&user.uuid, &photo.uuid);
 
         Photo {
+            id: photo.id,
             uuid: photo.uuid,
             url,
             present: photo.present.unwrap_or(false),

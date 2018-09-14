@@ -11,13 +11,15 @@ mod utils;
 extern crate chrono;
 use photothing_api::db::user::User;
 use photothing_api::web::Page;
+use photothing_api::albums::Album;
+use photothing_api::photos::Photo;
 
 use rocket::local::Client;
 use rocket::http::{Cookie, Status};
 use serde_json::Value;
 use chrono::prelude::*;
 
-use utils::web::{get, post, assert_user_cookie};
+use utils::web::{get, post, put, delete, assert_user_cookie};
 use utils::db;
 
 #[test]
@@ -43,6 +45,10 @@ fn photo_albums() {
     // curry the login cookie into some more helper methods
     let get_photos = || get(&client, "/api/photos", login_cookie.clone());
     let create_photo = |body: &Value| post(&client, "/api/upload", body, Some(login_cookie.clone()));
+    let create_album = |name: &str| post(&client, &format!("/api/albums?name={}", name), &json!({}), Some(login_cookie.clone()));
+    let add_photos = |id: i32, photos: Vec<i32>| put(&client, &format!("/api/albums/{}/photos", id), &json!(photos), Some(login_cookie.clone()));
+    let remove_photos = |id: i32, photos: Vec<i32>| delete(&client, &format!("/api/albums/{}/photos", id), &json!(photos), Some(login_cookie.clone()));
+    let get_album_photos = |id: i32, photo_id: &i32| get(&client, &format!("/api/albums/{}?key={}", id, photo_id), login_cookie.clone());
 
     // check that there are no photos for brand-new users
     {
@@ -68,19 +74,37 @@ fn photo_albums() {
     }
 
     // verify that we can retrieve photos from the API after creating them
+    let photo_ids: Vec<i32>;
     {
         let mut res = get_photos();
         assert_eq!(res.status(), Status::Ok);
-        let photos: Page<Value> = serde_json::from_slice(&res.body_bytes().expect("body")).expect("server JSON valid");
+        let photos: Page<Photo> = serde_json::from_slice(&res.body_bytes().expect("body")).expect("server JSON valid");
         assert_eq!(photos.items.len(), 30);
         assert_eq!(photos.remaining, 10);
         assert!(photos.next_key.is_some(), "remaining key returned");
         assert!(photos.key.is_none(), "key not none for first page of photos");
+        photo_ids = photos.map(|p| p.id).items[0..3].to_vec();
     }
 
-    // TODO: create album
-    // TODO: add two pictures to album
-    // TODO: verify we can fetch pictures in album with pagination
-    // TODO: remove one picture from album
-    // TODO: fetch again to verify
+    let mut res = create_album("baby%27s%20first%20%40lbum");
+    assert_eq!(res.status(), Status::Ok);
+    let album: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
+    assert!(album.photos.is_empty());
+    assert_eq!(album.name, Some(String::from("baby's first @lbum")));
+    let mut res = add_photos(album.id, photo_ids.clone());
+    let populated_album: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
+    assert_eq!(album.id, populated_album.id, "right album added to");
+    assert_eq!(populated_album.photos.items.len(), 3, "three photos added");
+
+    // check that pagination is respected for photo albums
+    {
+        let mut res = get_album_photos(album.id, photo_ids.iter().next().unwrap());
+        assert_eq!(res.status(), Status::Ok);
+        let paginated: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
+        assert_eq!(paginated.photos.items.len(), 2, "we skipped the first item");
+    }
+
+    let mut res = remove_photos(album.id, vec![photo_ids.into_iter().next().unwrap()]);
+    let two_pics: Album = serde_json::from_slice(&res.body_bytes().expect("body")).expect("valid json");
+    assert_eq!(two_pics.photos.items.len(), 2, "two photos remaining");
 }

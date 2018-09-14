@@ -16,6 +16,26 @@ pub mod web {
         req.dispatch()
     }
 
+    pub fn delete<'a, 'b, 'c>(client: &'a Client, endpoint: &'b str, body: &'c Value, login: Option<Cookie<'static>>) -> LocalResponse<'a> {
+        let mut req = client.delete(endpoint.to_string())
+            .header(ContentType::JSON)
+            .body(format!("{}", body));
+        if login.is_some() {
+            req = req.cookie(login.unwrap());
+        }
+        req.dispatch()
+    }
+
+    pub fn put<'a, 'b, 'c>(client: &'a Client, endpoint: &'b str, body: &'c Value, login: Option<Cookie<'static>>) -> LocalResponse<'a> {
+        let mut req = client.put(endpoint.to_string())
+            .header(ContentType::JSON)
+            .body(format!("{}", body));
+        if login.is_some() {
+            req = req.cookie(login.unwrap());
+        }
+        req.dispatch()
+    }
+
     pub fn get<'a, 'b>(client: &'a Client, endpoint: &'b str, login: Cookie<'static>) -> LocalResponse<'a> {
         client.get(endpoint.to_string())
             .cookie(login)

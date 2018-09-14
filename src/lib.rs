@@ -27,12 +27,12 @@ extern crate zxcvbn;
 extern crate rand;
 
 mod admin;
-mod albums;
+pub mod albums;
 mod auth;
 pub mod db;
 mod email;
 mod errors;
-mod photos;
+pub mod photos;
 mod s3;
 mod util;
 pub mod web;

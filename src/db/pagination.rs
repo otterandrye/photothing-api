@@ -86,6 +86,10 @@ impl<T> Page<T> {
         Page { key: None, next_key: None, remaining: 0, items: vec![] }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     pub fn map<F, U>(self, mapper: F) -> Page<U>
         where F: Fn(T) -> U
     {
