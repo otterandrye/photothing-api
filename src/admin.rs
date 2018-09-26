@@ -14,9 +14,9 @@ pub struct AdminContext {
 }
 
 pub fn fetch_dashboard(s3: &S3Access, db: &PgConnection) -> Result<AdminContext, ApiError> {
-    let users = ApiError::server_error(count_users(db))?;
+    let users = count_users(db)?;
     let s3 = s3_stats(s3);
-    let photos = ApiError::server_error(count_photos(db))?;
+    let photos = count_photos(db)?;
     Ok(AdminContext { users, s3, photos })
 }
 

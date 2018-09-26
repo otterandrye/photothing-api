@@ -51,10 +51,7 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
     -> Result<PendingUpload, ApiError>
 {
     let filename = ApiError::bad_request(AttributeKeyValue::new("filename", &upload.filename))?;
-
-    use diesel::result::Error;
-
-    let txn = db.transaction::<_, Error, _>(|| {
+    db.transaction(|| {
         let photo = NewPhoto::new(user);
         let photo = photo.insert(db)?;
         let filename_attr = NewPhotoAttr::new(&photo, filename);
@@ -64,12 +61,11 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
         let upload = sign_upload(s3, &user.uuid, upload, &photo.uuid);
 
         Ok(PendingUpload { photo, upload })
-    });
-    ApiError::server_error(txn)
+    })
 }
 
 pub fn user_photos(user: &User, db: &DbConn, s3: &S3Access, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
-    let page = ApiError::server_error(DbPhoto::by_user(db, user, pagination))?;
+    let page = DbPhoto::by_user(db, user, pagination)?;
     Ok(page.map(|(p, a)| Photo::new(user, s3, p, a)))
 }
 

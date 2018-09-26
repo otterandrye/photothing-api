@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::io::Cursor;
 
+use diesel::result::Error as DbError;
 use rocket::{Response, Request};
 use rocket::http::{ContentType, Status};
 use rocket::response::{Result as RocketResult, Responder};
@@ -27,12 +28,16 @@ impl<'r> Responder<'r> for ApiError {
 // for example:
 // `ApiError::bad_request(new_user.validate())?;` to return a 400 response for invalid user input
 impl ApiError {
+    fn new<E: Debug>(status: Status, error: E) -> Self {
+        ApiError { status, message: format!("{:?}", error) }
+    }
+
     pub fn is_user_error(&self) -> bool {
         return self.status == Status::BadRequest
     }
 
     fn message_with_status<T, E: Debug>(e: Result<T, E>, status: Status) -> Result<T, ApiError> {
-        e.map_err(|e| ApiError { status, message: format!("{:?}", e) })
+        e.map_err(|e| ApiError::new(status, e) )
     }
 
     pub fn server_error<T, E: Debug>(e: Result<T, E>) -> Result<T, ApiError> {
@@ -59,5 +64,12 @@ impl ApiError {
             status: Status::Unauthorized,
             message: "Username or password is invalid".to_string(),
         }
+    }
+}
+
+// unless otherwise specified, any DB error should 500
+impl From<DbError> for ApiError {
+    fn from(error: DbError) -> Self {
+        ApiError::new(Status::InternalServerError, error)
     }
 }

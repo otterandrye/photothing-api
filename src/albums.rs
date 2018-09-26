@@ -63,7 +63,7 @@ impl NewAlbum {
 }
 
 pub fn create_album(db: &DbConn, user: &User, details: NewAlbum) -> AlbumResult {
-    let album = ApiError::server_error(DbAlbum::create(&db, user, details.name()))?;
+    let album = DbAlbum::create(&db, user, details.name())?;
     Ok(Album::new(album, Page::empty()))
 }
 
@@ -76,7 +76,7 @@ pub fn add_photos_to_album(
     db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
-    ApiError::server_error(album.add_photos(&db, &photo_ids))?;
+    album.add_photos(&db, &photo_ids)?;
     load_photos(user, s3, &db, album)
 }
 
@@ -84,12 +84,12 @@ pub fn remove_photos_from_album(
     db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
-    ApiError::server_error(album.remove_photos(&db, &photo_ids))?;
+    album.remove_photos(&db, &photo_ids)?;
     load_photos(user, s3, &db, album)
 }
 
 pub fn user_albums(db: &DbConn, user: &User, page: Pagination) -> Result<Page<Album>, ApiError> {
-    let db_albums = ApiError::server_error(DbAlbum::for_user(&db, &user, page))?;
+    let db_albums = DbAlbum::for_user(&db, &user, page)?;
     let albums = db_albums.map(|a| Album::new(a, Page::empty()));
     Ok(albums)
 }
@@ -104,7 +104,7 @@ fn load_photos(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum) -> Album
 }
 
 fn load_photos_page(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum, page: Pagination) -> AlbumResult {
-    let photos = ApiError::server_error(album.get_photos(db, page))?;
+    let photos = album.get_photos(db, page)?;
     // use a closure to destructure the :( return type we get from the db code and curry the
     // s3 + user params
     let decorated_photo = |(p, m, a)| AlbumEntry::new(user, s3, p, m, a);

@@ -169,10 +169,9 @@ pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Resul
     let hashed = ApiError::bad_request(hash_password(&reset.password))?;
 
     use diesel::Connection;
-    use diesel::result::Error;
 
     // run this set of DB changes in a transaction so we never delete the reset w/o updating the pw
-    ApiError::server_error::<_, Error>(db.transaction(|| {
+    db.transaction(|| {
         let user = User::for_update(&db, &reset.email)?;
         if let Some(user) = user {
             let reset_auth = PasswordReset::by_uuid(&db, &user, uuid)?;
@@ -183,7 +182,7 @@ pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Resul
             }
         }
         Ok(false) // deliberately don't tell the user why their request failed
-    }))
+    })
 }
 
 #[cfg(test)]
