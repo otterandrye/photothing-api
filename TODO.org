@@ -14,6 +14,7 @@
 ** DONE photo album CRUD
 ** DONE decorate returned album photos appropriately
 ** DONE published album API
+** album ordering
 ** photo provenance API
 
 * design
