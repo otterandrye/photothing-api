@@ -286,6 +286,7 @@ mod functest {
         assert_eq!(album.photos.items.len(), 0, "didn't remove photo");
     }
 
+    #[ignore]
     #[test]
     fn album_publish_workflow() {
         let db = test_db();
