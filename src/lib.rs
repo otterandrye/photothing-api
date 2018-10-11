@@ -7,6 +7,7 @@ extern crate chrono;
 #[macro_use] extern crate diesel;
 extern crate dotenv;
 extern crate futures;
+extern crate harsh;
 #[macro_use] extern crate itertools;
 #[macro_use] extern crate log;
 extern crate mailgun_v3;

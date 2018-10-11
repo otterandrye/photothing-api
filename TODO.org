@@ -13,7 +13,8 @@
 ** DONE pagination on photo endpoint
 ** DONE photo album CRUD
 ** DONE decorate returned album photos appropriately
-** published album API
+** DONE published album API
+** photo provenance API
 
 * design
 ** how do edited versions of photos interact?

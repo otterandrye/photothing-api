@@ -9,7 +9,7 @@ use rocket::response::{Result as RocketResult, Responder};
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct ApiError {
-    status: Status,
+    pub status: Status,
     message: String,
 }
 
@@ -33,7 +33,8 @@ impl ApiError {
     }
 
     pub fn is_user_error(&self) -> bool {
-        return self.status == Status::BadRequest
+        // TODO :-(
+        self.status == Status::BadRequest || self.status == Status::NotFound
     }
 
     fn message_with_status<T, E: Debug>(e: Result<T, E>, status: Status) -> Result<T, ApiError> {

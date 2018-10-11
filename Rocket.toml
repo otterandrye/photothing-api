@@ -1,10 +1,12 @@
 [development]
 secret_key = "y776UJ3OBPATyMB1rag+RlKQqb9Ezd8lRky6O3noF0I="
+id_salt = "DevIdSalt"
 cdn_prefix = "dev"
 app_url = "http://localhost:3000"
 
 [staging]
 secret_key = "7bU2X1BgdUTlwZxIh8PRwGwAz3puYZarrgespKAMJRk="
+id_salt = "StagingIdSalt"
 cdn_prefix = "stg"
 app_url = "http://localhost:3000"
 log = "normal"

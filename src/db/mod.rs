@@ -1,6 +1,7 @@
 pub mod album;
 mod pagination;
 pub mod photo;
+pub mod publishing;
 pub mod user;
 pub mod schema;
 

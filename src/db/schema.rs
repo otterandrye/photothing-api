@@ -46,6 +46,16 @@ table! {
 }
 
 table! {
+    published_albums (id) {
+        id -> Int4,
+        album_id -> Int4,
+        user_id -> Int4,
+        active -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         email -> Varchar,
@@ -64,6 +74,8 @@ joinable!(password_resets -> users (user_id));
 joinable!(photo_albums -> users (user_id));
 joinable!(photo_attrs -> photos (photo_id));
 joinable!(photos -> users (owner));
+joinable!(published_albums -> photo_albums (album_id));
+joinable!(published_albums -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     album_membership,
@@ -71,5 +83,6 @@ allow_tables_to_appear_in_same_query!(
     photo_albums,
     photo_attrs,
     photos,
+    published_albums,
     users,
 );

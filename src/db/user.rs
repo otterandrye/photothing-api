@@ -27,6 +27,11 @@ impl User {
         users.filter(email.eq(user_email)).first(db).optional()
     }
 
+    pub fn by_id(db: &PgConnection, user_id: i32) -> QueryResult<Option<User>> {
+        use db::schema::users::dsl::*;
+        users.filter(id.eq(user_id)).first(db).optional()
+    }
+
     // Select a user row for update (locks the row)
     pub fn for_update(db: &PgConnection, user_email: &str) -> QueryResult<Option<MutableUser>> {
         use db::schema::users::dsl::*;

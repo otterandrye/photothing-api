@@ -1,4 +1,5 @@
 use dotenv;
+use harsh::{Harsh, HarshBuilder};
 use rocket::fairing::AdHoc;
 use rocket::{ignite, Rocket, State};
 use rocket::http::{Cookies, Method};
@@ -107,10 +108,41 @@ fn add_photos_to_album(user: User, s3: State<S3Access>, db: DbConn, id: i32, pho
     Ok(Json(album))
 }
 
+#[get("/albums/published")]
+fn get_published_albums(user: User, db: DbConn, harsh: State<Harsh>) -> Api<Vec<albums::UrlFriendlyAlbum>> {
+    let albums = albums::user_published_albums(&db, &user, harsh.inner())?;
+    Ok(Json(albums))
+}
+
+#[post("/albums/<id>/publish")]
+fn publish_album(user: User, db: DbConn, harsh: State<Harsh>, id: i32) -> Api<albums::UrlFriendlyAlbum> {
+    let published = albums::publish_album(&db, &user, harsh.inner(), id)?;
+    Ok(Json(published))
+}
+
 #[delete("/albums/<id>/photos", data = "<photos>")]
 fn remove_photos_from_album(user: User, s3: State<S3Access>, db: DbConn, id: i32, photos: Json<Vec<i32>>) -> Api<albums::Album> {
     let album = albums::remove_photos_from_album(&db, &user, s3.inner(), id, photos.into_inner())?;
     Ok(Json(album))
+}
+
+#[get("/published/<hash_id>?<page>")]
+fn get_published_photos(db: DbConn, s3: State<S3Access>, harsh: State<Harsh>, hash_id: String, page: Pagination) -> Api<albums::Album> {
+    // Note: not an authenticated endpoint!
+    let photos = albums::get_published_photos(&db, s3.inner(), harsh.inner(), hash_id, page)?;
+    Ok(Json(photos))
+}
+
+#[delete("/published/<hash_id>")]
+fn delete_published_album(user: User, db: DbConn, harsh: State<Harsh>, hash_id: String) -> Api<bool> {
+    albums::delete_published_album(&db, &user, harsh.inner(), hash_id)?;
+    Ok(Json(true))
+}
+
+#[post("/published/<hash_id>?<active>")]
+fn toggle_published_album(db: DbConn, user: User, harsh: State<Harsh>, hash_id: String, active: albums::ToggleActive) -> Api<bool> {
+    albums::toggle_published_album(&db, &user, harsh.inner(), hash_id, active)?;
+    Ok(Json(true))
 }
 
 #[get("/admin")]
@@ -149,6 +181,12 @@ pub fn rocket() -> Rocket {
             Ok(rocket.manage(S3Access::new(bucket, cdn_url, cdn_prefix)))
         }))
         .attach(AdHoc::on_attach(|rocket| {
+            let salt = rocket.config().get_str("id_salt").expect("missing salt").to_owned();
+            let harsh = HarshBuilder::new().salt(salt).length(4)
+                .init().expect("couldn't init id hasher");
+            Ok(rocket.manage(harsh))
+        }))
+        .attach(AdHoc::on_attach(|rocket| {
             let email;
             {
                 let key = rocket.config().get_str("mailgun_key");
@@ -172,7 +210,9 @@ pub fn rocket() -> Rocket {
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password,
             sign_user_upload, get_photos, get_photos_page,
-            fetch_user_albums, create_album, fetch_album, add_photos_to_album, remove_photos_from_album
+            fetch_user_albums, create_album, fetch_album, add_photos_to_album, remove_photos_from_album,
+            publish_album, get_published_albums, delete_published_album, toggle_published_album,
+            get_published_photos
         ])
 }
 
