@@ -15,6 +15,7 @@ use auth;
 use auth::guards::*;
 use admin;
 use albums;
+use https;
 use photos;
 
 pub use db::Page;
@@ -206,6 +207,7 @@ pub fn rocket() -> Rocket {
         .manage(init_db_pool())
         .attach(cors)
         .attach(Template::fairing())
+        .attach(https::ProductionHttpsRedirect {})
         .mount("/", routes![admin])
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password,
@@ -214,6 +216,7 @@ pub fn rocket() -> Rocket {
             publish_album, get_published_albums, delete_published_album, toggle_published_album,
             get_published_photos
         ])
+        .mount("/internal", routes![https::redirect_handler])
 }
 
 #[cfg(test)]
