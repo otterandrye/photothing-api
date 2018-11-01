@@ -49,8 +49,8 @@
 * legal
 ** LLC
 ** stripe integration
-** product name
-*** domain
+** DONE product name
+*** DONE domain
 *** emails
 ** logo
 ** ToS / Use

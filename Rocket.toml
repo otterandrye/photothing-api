@@ -13,5 +13,5 @@ log = "normal"
 
 [production]
 cdn_prefix = ""
-app_url = "https://photo-thing.herokuapp.com"
+app_url = "https://www.chroma.pics"
 log = "normal"
