@@ -17,6 +17,7 @@ use auth;
 use auth::guards::*;
 use admin;
 use albums;
+use hsts;
 use https;
 use photos;
 
@@ -211,6 +212,7 @@ pub fn rocket() -> Rocket {
         .attach(cors)
         .attach(Template::fairing())
         .attach(https::ProductionHttpsRedirect {})
+        .attach(hsts::sts_header())
         .mount("/", routes![admin])
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password, me,

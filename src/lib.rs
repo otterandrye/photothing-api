@@ -33,6 +33,7 @@ mod auth;
 pub mod db;
 mod email;
 mod errors;
+mod hsts;
 mod https;
 pub mod photos;
 mod s3;
