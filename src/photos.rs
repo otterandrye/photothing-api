@@ -73,7 +73,7 @@ pub fn user_photos(user: &User, db: &DbConn, s3: &S3Access, pagination: Paginati
 mod test {
     use dotenv;
 
-    use db::{DbConn, init_db_pool};
+    use db::{DbConn, test_db};
     use db::user::NewUser;
     use s3::UploadRequest;
     use super::*;
@@ -81,8 +81,7 @@ mod test {
     fn setup() -> (User, S3Access, DbConn) {
         dotenv::dotenv().ok();
         let s3 = S3Access::new("fake_bucket".into(), "foo.com".into(), None);
-        let pool = init_db_pool();
-        let db = DbConn(pool.get().expect("couldn't connect to db"));
+        let db = test_db();
         let user = NewUser::fake("e");
         let user = user.insert(&db).expect("couldn't make user");
         (user, s3, db)
