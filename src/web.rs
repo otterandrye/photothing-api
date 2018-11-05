@@ -225,6 +225,8 @@ mod test {
     use rocket::local::Client;
     use rocket::http::{ContentType, Status};
 
+    use std::{thread, time};
+
     fn client() -> Client {
         Client::new(rocket()).expect("valid rocket instance")
     }
@@ -238,6 +240,7 @@ mod test {
             .body("{}".to_string())
             .dispatch();
          assert_eq!(response.status(), Status::Unauthorized);
+         thread::sleep(time::Duration::from_millis(100));
     }
 
     #[ignore]
@@ -249,5 +252,6 @@ mod test {
             .body(format!("{}", json!({"filename": "foo", "file_type": "bar"})))
             .dispatch();
          assert_eq!(response.status(), Status::Unauthorized);
+         thread::sleep(time::Duration::from_millis(100));
     }
 }
