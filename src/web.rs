@@ -9,7 +9,7 @@ use rocket_contrib::templates::Template;
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 use serde_json::Value;
 
-use db::{init_db_pool, DbConn, Pagination};
+use db::{DbConn, Pagination};
 use email::{Emailer, init_emailer, dummy_emailer};
 use errors::ApiError;
 use s3::{S3Access, UploadRequest};
@@ -207,7 +207,7 @@ pub fn rocket() -> Rocket {
             }
             Ok(rocket.manage(email))
         }))
-        .manage(init_db_pool())
+        .attach(DbConn::fairing())
         .attach(cors)
         .attach(Template::fairing())
         .attach(https::ProductionHttpsRedirect {})

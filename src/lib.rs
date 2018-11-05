@@ -14,7 +14,7 @@ extern crate mailchecker;
 extern crate r2d2;
 extern crate reqwest;
 #[macro_use] extern crate rocket;
-extern crate rocket_contrib;
+#[macro_use] extern crate rocket_contrib;
 extern crate rocket_cors;
 #[macro_use] extern crate serde_derive;
 extern crate rusoto_core;

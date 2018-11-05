@@ -4,7 +4,7 @@ use diesel::Connection;
 use std::collections::HashMap;
 
 use db::user::User;
-use db::{DbConn, Pagination, Page};
+use db::{PgConnection, Pagination, Page};
 use db::photo::{NewPhotoAttr, NewPhoto, Photo as DbPhoto, PhotoAttr, AttributeKeyValue};
 use errors::ApiError;
 use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
@@ -47,7 +47,7 @@ pub struct PendingUpload {
     upload: UploadResponse,
 }
 
-pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadRequest)
+pub fn create_photo(user: &User, db: &PgConnection, s3: &S3Access, upload: UploadRequest)
     -> Result<PendingUpload, ApiError>
 {
     let filename = ApiError::bad_request(AttributeKeyValue::new("filename", &upload.filename))?;
@@ -64,7 +64,7 @@ pub fn create_photo(user: &User, db: &DbConn, s3: &S3Access, upload: UploadReque
     })
 }
 
-pub fn user_photos(user: &User, db: &DbConn, s3: &S3Access, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
+pub fn user_photos(user: &User, db: &PgConnection, s3: &S3Access, pagination: Pagination) -> Result<Page<Photo>, ApiError> {
     let page = DbPhoto::by_user(db, user, pagination)?;
     Ok(page.map(|(p, a)| Photo::new(user, s3, p, a)))
 }
@@ -73,12 +73,12 @@ pub fn user_photos(user: &User, db: &DbConn, s3: &S3Access, pagination: Paginati
 mod test {
     use dotenv;
 
-    use db::{DbConn, test_db};
+    use db::{PgConnection, test_db};
     use db::user::NewUser;
     use s3::UploadRequest;
     use super::*;
 
-    fn setup() -> (User, S3Access, DbConn) {
+    fn setup() -> (User, S3Access, PgConnection) {
         dotenv::dotenv().ok();
         let s3 = S3Access::new("fake_bucket".into(), "foo.com".into(), None);
         let db = test_db();
