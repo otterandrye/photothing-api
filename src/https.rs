@@ -1,7 +1,7 @@
 use rocket::{Rocket, Request, Data};
+use rocket::config::Environment;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::fairing::AdHoc;
-use rocket::config::Environment;
 use rocket::response::Redirect;
 
 pub struct ProductionHttpsRedirect;
@@ -9,7 +9,7 @@ pub struct ProductionHttpsRedirect;
 impl Fairing for ProductionHttpsRedirect {
     fn info(&self) -> Info {
         Info {
-            name: "ProductionOnly",
+            name: "ProductionHttpsRedirector",
             kind: Kind::Attach
         }
     }
@@ -19,7 +19,7 @@ impl Fairing for ProductionHttpsRedirect {
             Environment::Production => {
                 let host = rocket.config().get_str("api_host")
                     .expect("missing api host").to_owned();
-                let rocket = rocket.attach(AdHoc::on_request(https_redirector(host)));
+                let rocket = rocket.attach(AdHoc::on_request("http->https", https_redirector(host)));
                 Ok(rocket)
             },
             _ => Ok(rocket),
@@ -36,19 +36,13 @@ fn https_redirector(host: String) -> impl Fn(&mut Request, &Data) {
         };
         if !is_https {
             let uri = format!("{}", req.uri());
-            req.set_uri(format!("/internal/https-redirect?host={}&to={}", host, uri));
+            req.set_uri(uri!(redirect_handler: host.clone(), uri));
         }
     }
 }
 
-#[derive(FromForm)]
-pub struct RedirectParams {
-    host: String,
-    to: String,
-}
-
 /// This must be attached to rocket under '/internal' to handle the redirect routing
-#[get("/https-redirect?<dest>")]
-pub fn redirect_handler(dest: RedirectParams) -> Redirect {
-    Redirect::permanent(&format!("https://{}{}", &dest.host, &dest.to))
+#[get("/https-redirect?<host>&<to>")]
+pub fn redirect_handler(host: String, to: String) -> Redirect {
+    Redirect::permanent(format!("https://{}{}", &host, &to))
 }

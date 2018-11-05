@@ -115,11 +115,6 @@ fn load_photos_page(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum, pag
     Ok(Album::new(album, photos))
 }
 
-#[derive(FromForm)]
-pub struct ToggleActive {
-    active: bool
-}
-
 #[derive(Serialize)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct UrlFriendlyAlbum {
@@ -184,9 +179,9 @@ pub fn delete_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: 
     Ok(())
 }
 
-pub fn toggle_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: String, active: ToggleActive) -> Result<(), ApiError> {
+pub fn toggle_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: String, active: bool) -> Result<(), ApiError> {
     let album = get_users_published_album(db, user, harsh, &hash_id)?;
-    album.set_active(db, active.active)?;
+    album.set_active(db, active)?;
     Ok(())
 }
 
@@ -286,7 +281,6 @@ mod functest {
         assert_eq!(album.photos.items.len(), 0, "didn't remove photo");
     }
 
-    #[ignore]
     #[test]
     fn album_publish_workflow() {
         let db = test_db();
@@ -323,13 +317,11 @@ mod functest {
         let other_user_pub = user_published_albums(&db, &u2, &harsh).expect("album fetch ok");
         assert!(other_user_pub.is_empty());
 
-        let disabled = ToggleActive { active: false };
-        toggle_published_album(&db, &user, &harsh, published.hash.clone(), disabled).expect("toggled off");
+        toggle_published_album(&db, &user, &harsh, published.hash.clone(), false).expect("toggled off");
         get_published_photos(&db, &s3, &harsh, published.hash.clone(), Pagination::first())
             .expect_err("album not published anymore");
 
-        let enabled = ToggleActive { active: true };
-        toggle_published_album(&db, &user, &harsh, published.hash.clone(), enabled).expect("toggled back on");
+        toggle_published_album(&db, &user, &harsh, published.hash.clone(), true).expect("toggled back on");
         let album = get_published_photos(&db, &s3, &harsh, published.hash.clone(), Pagination::first())
             .expect("album re-published");
         assert_eq!(album.photos.items.len(), 1);
