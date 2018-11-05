@@ -26,7 +26,8 @@ pub fn init_db_pool() -> PgPool {
 }
 
 // Connection request guard type: a wrapper around an r2d2 pooled connection.
-pub struct DbConn(pub PooledConnection<ConnectionManager<PgConnection>>);
+//pub struct DbConn(pub PooledConnection<ConnectionManager<PgConnection>>);
+pub struct DbConn(pub PgConnection);
 
 /// Attempts to retrieve a single connection from the managed database pool. If
 /// no pool is currently managed, fails with an `InternalServerError` status. If
@@ -37,7 +38,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for DbConn {
     fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
         let pool = request.guard::<State<PgPool>>()?;
         match pool.get() {
-            Ok(conn) => Outcome::Success(DbConn(conn)),
+            Ok(conn) => Outcome::Failure((Status::ServiceUnavailable, ())), // Outcome::Success(DbConn(conn)),
             Err(_) => Outcome::Failure((Status::ServiceUnavailable, ()))
         }
     }
@@ -56,7 +57,13 @@ impl Deref for DbConn {
 #[cfg(test)]
 pub fn test_db() -> DbConn {
     use dotenv;
+    use diesel::Connection;
     dotenv::dotenv().ok();
+    let db = env::var("DATABASE_URL").expect("missing database url");
+    let conn = PgConnection::establish(&db).expect("couldn't connect to db");
+    DbConn(conn)
+    /*
     let pool = init_db_pool();
     DbConn(pool.get().expect("couldn't connect to db"))
+    */
 }
