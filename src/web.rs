@@ -229,6 +229,7 @@ mod test {
         Client::new(rocket()).expect("valid rocket instance")
     }
 
+    #[ignore]
     #[test]
     fn logout_no_user() {
         let client = client();
@@ -239,6 +240,7 @@ mod test {
          assert_eq!(response.status(), Status::Unauthorized);
     }
 
+    #[ignore]
     #[test]
     fn upload_no_user() {
         let client = client();
