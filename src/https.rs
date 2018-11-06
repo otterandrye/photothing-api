@@ -44,7 +44,7 @@ fn https_redirector(host: String) -> impl Fn(&mut Request, &Data) {
 }
 
 /// This must be attached to rocket under '/internal' to handle the redirect routing
-#[get("/https-redirect?<host>&<to>")]
+#[get("/interna/https-redirect?<host>&<to>")]
 pub fn redirect_handler(host: String, to: String) -> Redirect {
     Redirect::permanent(format!("https://{}{}", &host, &to))
 }
