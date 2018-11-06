@@ -213,7 +213,7 @@ pub fn rocket() -> Rocket {
         .attach(https::ProductionHttpsRedirect {})
         .mount("/", routes![admin])
         .mount("/api", routes![
-            login, logout, register, start_reset_password, reset_password,
+            login, logout, register, start_reset_password, reset_password, me,
             sign_user_upload, get_photos, get_photos_page,
             fetch_user_albums, create_album, fetch_album, add_photos_to_album, remove_photos_from_album,
             publish_album, get_published_albums, delete_published_album, toggle_published_album,
@@ -228,26 +228,13 @@ mod test {
     use rocket::local::Client;
     use rocket::http::{ContentType, Status};
 
-    fn client() -> Client {
-        Client::new(rocket()).expect("valid rocket instance")
-    }
-
     #[test]
-    fn logout_no_user() {
-        let client = client();
-        let response = client.post("/api/logout")
+    fn me() {
+        // just a quick test to make sure rocket() starts up okay
+        let rocket = rocket();
+        let client = Client::new(rocket).expect("valid rocket instance");
+        let response = client.get("/api/me")
             .header(ContentType::JSON)
-            .body("{}".to_string())
-            .dispatch();
-         assert_eq!(response.status(), Status::Unauthorized);
-    }
-
-    #[test]
-    fn upload_no_user() {
-        let client = client();
-        let response = client.post("/api/upload")
-            .header(ContentType::JSON)
-            .body(format!("{}", json!({"filename": "foo", "file_type": "bar"})))
             .dispatch();
          assert_eq!(response.status(), Status::Unauthorized);
     }

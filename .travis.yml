@@ -21,8 +21,8 @@ before_script:
   - diesel migration run
 
 script:
-  - cargo test
-  - cargo test -- --ignored
+  - cargo test -- --test-threads=1
+  - cargo test -- --test-threads=1 --ignored
 
 after_script:
   - sudo -u postgres psql -c 'drop database travis_ci_test;' -U postgres
