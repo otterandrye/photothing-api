@@ -172,7 +172,7 @@ pub fn rocket() -> Rocket {
         .attach(Template::fairing())
         .attach(https::ProductionHttpsRedirect {})
         .attach(hsts::sts_header())
-        .mount("/", routes![admin])
+        .mount("/", routes![admin, https::redirect_handler])
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password, me,
             sign_user_upload, get_photos, get_photos_page,
@@ -180,5 +180,4 @@ pub fn rocket() -> Rocket {
             publish_album, get_published_albums, delete_published_album, toggle_published_album,
             get_published_photos
         ])
-        .mount("/internal", routes![https::redirect_handler])
 }
