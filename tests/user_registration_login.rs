@@ -33,6 +33,7 @@ fn user_registration_login() {
     // if this fails you may need to 'truncate table users' in your db
     // TODO: run tests in a separate/clean database
     assert_eq!(res.status(), Status::Unauthorized, "login: no user registered yet");
+    assert!(res.headers().contains("Strict-Transport-Security"), "http sts header present");
     let res = logout();
     assert_eq!(res.status(), Status::Unauthorized, "logout: no user registered");
 
