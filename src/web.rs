@@ -221,21 +221,3 @@ pub fn rocket() -> Rocket {
         ])
         .mount("/internal", routes![https::redirect_handler])
 }
-
-#[cfg(test)]
-mod test {
-    use super::rocket;
-    use rocket::local::Client;
-    use rocket::http::{ContentType, Status};
-
-    #[test]
-    fn me() {
-        // just a quick test to make sure rocket() starts up okay
-        let rocket = rocket();
-        let client = Client::new(rocket).expect("valid rocket instance");
-        let response = client.get("/api/me")
-            .header(ContentType::JSON)
-            .dispatch();
-         assert_eq!(response.status(), Status::Unauthorized);
-    }
-}

@@ -11,7 +11,7 @@ use rocket::local::Client;
 use rocket::http::{Cookie, ContentType, Header, Status};
 use serde_json::Value;
 
-use utils::web::{post, assert_user_cookie};
+use utils::web::{get, post, assert_user_cookie};
 
 #[test]
 #[ignore]
@@ -77,6 +77,9 @@ fn user_registration_login() {
         _ => assert!(false, "got badly formed login response body"),
     }
     let auth_header = auth_header.expect("didn't get auth header in login response");
+
+    let res = get(&client, "/api/me", login_cookie.clone());
+    assert_eq!(res.status(), Status::Ok, "/me api works when logged in");
 
     // if registering w/ an in-use email we shouldn't expose an error
     let mut res = register(&creds);
