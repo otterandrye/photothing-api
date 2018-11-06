@@ -30,6 +30,7 @@ extern crate rand;
 mod admin;
 pub mod albums;
 mod auth;
+mod config;
 pub mod db;
 mod email;
 mod errors;
