@@ -5,7 +5,7 @@ use url::form_urlencoded;
 
 use zxcvbn::zxcvbn as check_password;
 
-use db::DbConn;
+use db::PgConnection;
 use db::user::{User, NewUser, PasswordReset};
 use email::Emailer;
 use errors::ApiError;
@@ -59,7 +59,7 @@ impl UserResponse {
 }
 
 // Create a new user account
-pub fn create_user(new_user: UserLogin, db: &DbConn) -> Result<UserResponse, ApiError> {
+pub fn create_user(new_user: UserLogin, db: &PgConnection) -> Result<UserResponse, ApiError> {
     let email = new_user.email.clone();
 
     ApiError::bad_request(new_user.validate())?;
@@ -99,7 +99,7 @@ impl UserCredentials {
 // Check the provided email/password against the database
 //  - Set a private cookie on success
 //  - don't send the user any database errors, could leak sensitive info
-pub fn try_login_user(creds: UserLogin, db: &DbConn, cookies: Cookies) -> Option<UserCredentials> {
+pub fn try_login_user(creds: UserLogin, db: &PgConnection, cookies: Cookies) -> Option<UserCredentials> {
     match User::by_email(db, &creds.email) {
         Err(e) => {
             error!("Error fetching user ({:?}): {}", creds, e);
@@ -134,7 +134,7 @@ fn login(mut cookies: Cookies, user: User) -> UserCredentials {
 }
 
 pub fn start_password_reset(
-    email: &str, db: &DbConn, emailer: &Emailer
+    email: &str, db: &PgConnection, emailer: &Emailer
 ) -> Result<Option<PasswordReset>, ApiError> {
     info!("Starting password reset for '{}'", &email);
     let user = ApiError::server_error(User::by_email(&db, &email))?;
@@ -162,7 +162,7 @@ fn password_reset_url(app_url: &str, email: &str, reset: &PasswordReset) -> Stri
     format!("{}/password_reset?{}", app_url, encoded)
 }
 
-pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &DbConn) -> Result<bool, ApiError> {
+pub fn handle_password_reset(reset: UserLogin, uuid: &str, db: &PgConnection) -> Result<bool, ApiError> {
     info!("Handling reset for '{}' with uuid='{}'", &reset.email, uuid);
     // handle potential user-caused errors first, always hash to prevent timing attacks
     ApiError::bad_request(reset.validate())?;

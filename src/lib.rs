@@ -1,5 +1,4 @@
-#![feature(plugin, custom_derive)]
-#![plugin(rocket_codegen)]
+#![feature(plugin, custom_derive, proc_macro_hygiene, decl_macro)]
 #![allow(proc_macro_derive_resolution_fallback)] // diesel warning, https://github.com/rust-lang/rust/issues/50504
 
 extern crate bcrypt;
@@ -14,8 +13,8 @@ extern crate mailgun_v3;
 extern crate mailchecker;
 extern crate r2d2;
 extern crate reqwest;
-extern crate rocket;
-extern crate rocket_contrib;
+#[macro_use] extern crate rocket;
+#[macro_use] extern crate rocket_contrib;
 extern crate rocket_cors;
 #[macro_use] extern crate serde_derive;
 extern crate rusoto_core;

@@ -21,8 +21,8 @@ before_script:
   - diesel migration run
 
 script:
-  - cargo test
-  - cargo test -- --ignored
+  - cargo test -- --test-threads=1
+  - cargo test -- --test-threads=1 --ignored
 
 after_script:
   - sudo -u postgres psql -c 'drop database travis_ci_test;' -U postgres
@@ -31,6 +31,7 @@ env:
   global:
   - PGPORT=5433
   - DATABASE_URL="postgres://postgres:1234@localhost:5433/travis_ci_test"
+  - ROCKET_DATABASES="{photos={url=\"postgres://postgres:1234@localhost:5433/travis_ci_test\"}}"
   - RUST_BACKTRACE=1
   - secure: PDHTadI2oj4YgUTl/RpWUQBS1NByOo6XNizvGI74AnN/A3/Ep2TaTmrsGIQQflVR9xg1Oek+Z7/6g4SDMjsrOXbfL1O3iw/XRwIKyNnR4LXg66bv1s/fNNmtcABja6xEEixv5SIjHz0y/C+LZfCqoZVMgQ/mjl/TUVVgHfFe9my/OMf1lXvm22adr8Ur8LuuOFV87KKZoi2rddes78pWW2tFDFVT62MeCih+f63NwJIQ8HjMuLJj0TCyZuBY1fKqBEP0PQXxhedvOHoGHGfOI4bD1Fo9Azi0JiMStr9+AIolV0gg2S3qavIYk3tojhGqTZE7Y0ogmmAk20rClbnO7QF8JllVlhMlapt8HEI+mQSw35HREKWIECgDDj6+Hx2oHNEjqOlkoFfK5oYdIv/DKUo92N1mS3HmFlUEAMTZDkTuJkjSNxGHzjYLRfH8krUc+AQvjw1bmgfR7kzjbALUvGYVQsNjGda8ci3INN0aBa0ddgBGfn8ro7ueJEBPW9YmlLopiYLJH4VvTopZZmNv4a5Y0k1scW0MZfCoAdL7PEm0DCsJydIWiTakLwhh4FCfBxWooZxGKbIqDeei0fjZtXz2DHS2liaHHn2XP4BiMnEGb9J6G89xobbyk3K0QsNtQmqCsVwJf+OFEG2B8wiRbI4JL4mhwfnUL+phtTiqdMg=
   - secure: RVHtdp8KiAMAaDxvMZUNIV5RGJz0EMdBgnvXLQu1/R6oQLjqQH0vCTuGRkkgfPypCV+MBd3/niw5BW8fckd93UDlM+M/7zaNYEj5u07W1IuXyc20ZKnY1X3YDL2k3Eq3vODvOwD8Q8VAfJmBU8IPKWO5cyjQUKdIMVcnDHGtRvAORG9v1Wr/HIlX9sAuwKdNLVsb0TRfPZWaFafWvZwLfuM3M2y6Mg7t/DBiQU52/17y6Efh1Un5UiYf6X25jq61ZypvGFFFfpskm71nTP25EzPAZZmIaBYhfzW/F2taQR5w+FBhrOzdL8rTbaxA6GD7E6w5LerUxAviNzka4q2rFC1JR87YEx5Eg7Wkf3RPDYzZ2QbQCANvH0WBVD9hx+42mEg8S49BOgyOa9V+w7f5yF68KDDqBYrHdb6kh2nqCpYCra0Z2tdkqXsLywb5pDlX3iwqM59hKgKt64WCCwFudC465X5mq9ObcxFjhBBE8XDHwz9hUd16sKOHe1EDPmLe5ysxjTp7UW6QK5eWyscCNd5MnRmXZ4jMyAmCTCsrxCQzIxYaqSRYgX60Hi6DA/yzXGCiIDaB8vzHjiJnAYGIbqxlIwwytle5pipLqu0snXJsWCgTEENcClNfa1p5gGSfNNt5rTuG+g0G5fiR28+YwaSPHRTU2GXDq6mf6hxKUJo=

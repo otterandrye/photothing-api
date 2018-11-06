@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use harsh::Harsh;
 
-use db::{DbConn, Pagination, Page};
+use db::{PgConnection, Pagination, Page};
 use db::user::User;
 use db::album::Album as DbAlbum;
 use db::album::AlbumMembership;
@@ -65,18 +65,18 @@ impl NewAlbum {
     }
 }
 
-pub fn create_album(db: &DbConn, user: &User, details: NewAlbum) -> AlbumResult {
+pub fn create_album(db: &PgConnection, user: &User, details: NewAlbum) -> AlbumResult {
     let album = DbAlbum::create(&db, user, details.name())?;
     Ok(Album::new(album, Page::empty()))
 }
 
-pub fn fetch_album(db: &DbConn, user: &User, s3: &S3Access, id: i32, page: Pagination) -> AlbumResult {
+pub fn fetch_album(db: &PgConnection, user: &User, s3: &S3Access, id: i32, page: Pagination) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
     load_photos_page(user, s3, db, album, page)
 }
 
 pub fn add_photos_to_album(
-    db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
+    db: &PgConnection, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
     album.add_photos(&db, &photo_ids)?;
@@ -84,40 +84,35 @@ pub fn add_photos_to_album(
 }
 
 pub fn remove_photos_from_album(
-    db: &DbConn, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
+    db: &PgConnection, user: &User, s3: &S3Access, id: i32, photo_ids: Vec<i32>
 ) -> AlbumResult {
     let album = fetch_db_album(&db, &user, id)?;
     album.remove_photos(&db, &photo_ids)?;
     load_photos(user, s3, &db, album)
 }
 
-pub fn user_albums(db: &DbConn, user: &User, page: Pagination) -> Result<Page<Album>, ApiError> {
+pub fn user_albums(db: &PgConnection, user: &User, page: Pagination) -> Result<Page<Album>, ApiError> {
     let db_albums = DbAlbum::for_user(&db, &user, page)?;
     let albums = db_albums.map(|a| Album::new(a, Page::empty()));
     Ok(albums)
 }
 
-fn fetch_db_album(db: &DbConn, user: &User, id: i32) -> Result<DbAlbum, ApiError> {
+fn fetch_db_album(db: &PgConnection, user: &User, id: i32) -> Result<DbAlbum, ApiError> {
     let album = ApiError::server_error(DbAlbum::by_id(&db, &user, id))?;
     ApiError::not_found(album, format!("could not find album with id={}", id))
 }
 
-fn load_photos(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum) -> AlbumResult {
+fn load_photos(user: &User, s3: &S3Access, db: &PgConnection, album: DbAlbum) -> AlbumResult {
     load_photos_page(user, s3, db, album, Pagination::first())
 }
 
-fn load_photos_page(user: &User, s3: &S3Access, db: &DbConn, album: DbAlbum, page: Pagination) -> AlbumResult {
+fn load_photos_page(user: &User, s3: &S3Access, db: &PgConnection, album: DbAlbum, page: Pagination) -> AlbumResult {
     let photos = album.get_photos(db, page)?;
     // use a closure to destructure the :( return type we get from the db code and curry the
     // s3 + user params
     let decorated_photo = |(p, m, a)| AlbumEntry::new(user, s3, p, m, a);
     let photos = photos.map(decorated_photo);
     Ok(Album::new(album, photos))
-}
-
-#[derive(FromForm)]
-pub struct ToggleActive {
-    active: bool
 }
 
 #[derive(Serialize)]
@@ -157,19 +152,19 @@ fn not_found<T>(album: Option<T>, hash_id: &str) -> Result<T, ApiError> {
     ApiError::not_found(album, format!("no published album with id={}", hash_id))
 }
 
-pub fn publish_album(db: &DbConn, user: &User, harsh: &Harsh, id: i32) -> Result<UrlFriendlyAlbum, ApiError> {
+pub fn publish_album(db: &PgConnection, user: &User, harsh: &Harsh, id: i32) -> Result<UrlFriendlyAlbum, ApiError> {
     let album = fetch_db_album(&db, &user, id)?;
     let published = PublishedAlbum::publish(&db, album)?;
     Ok(UrlFriendlyAlbum::new(harsh, published))
 }
 
-fn get_published_album(db: &DbConn, harsh: &Harsh, hash_id: &String) -> Result<PublishedAlbum, ApiError> {
+fn get_published_album(db: &PgConnection, harsh: &Harsh, hash_id: &String) -> Result<PublishedAlbum, ApiError> {
     let published_album_id = UrlFriendlyAlbum::decode_id(&harsh, hash_id)?;
     let album = PublishedAlbum::by_id(db, published_album_id)?;
     not_found(album, hash_id)
 }
 
-fn get_users_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: &String) -> Result<PublishedAlbum, ApiError> {
+fn get_users_published_album(db: &PgConnection, user: &User, harsh: &Harsh, hash_id: &String) -> Result<PublishedAlbum, ApiError> {
     let album = get_published_album(db, harsh, hash_id)?;
     if album.user_id != user.id {
         not_found(None, hash_id)
@@ -178,24 +173,24 @@ fn get_users_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: &
     }
 }
 
-pub fn delete_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: String) -> Result<(), ApiError> {
+pub fn delete_published_album(db: &PgConnection, user: &User, harsh: &Harsh, hash_id: String) -> Result<(), ApiError> {
     let album = get_users_published_album(db, user, harsh, &hash_id)?;
     album.delete(db)?;
     Ok(())
 }
 
-pub fn toggle_published_album(db: &DbConn, user: &User, harsh: &Harsh, hash_id: String, active: ToggleActive) -> Result<(), ApiError> {
+pub fn toggle_published_album(db: &PgConnection, user: &User, harsh: &Harsh, hash_id: String, active: bool) -> Result<(), ApiError> {
     let album = get_users_published_album(db, user, harsh, &hash_id)?;
-    album.set_active(db, active.active)?;
+    album.set_active(db, active)?;
     Ok(())
 }
 
-pub fn user_published_albums(db: &DbConn, user: &User, harsh: &Harsh) -> Result<Vec<UrlFriendlyAlbum>, ApiError> {
+pub fn user_published_albums(db: &PgConnection, user: &User, harsh: &Harsh) -> Result<Vec<UrlFriendlyAlbum>, ApiError> {
     let albums = PublishedAlbum::for_user(db, user)?;
     Ok(albums.into_iter().map(|a| UrlFriendlyAlbum::new(&harsh, a)).collect())
 }
 
-pub fn get_published_photos(db: &DbConn, s3: &S3Access, harsh: &Harsh, hash_id: String, page: Pagination) -> AlbumResult {
+pub fn get_published_photos(db: &PgConnection, s3: &S3Access, harsh: &Harsh, hash_id: String, page: Pagination) -> AlbumResult {
     let published = get_published_album(db, harsh, &hash_id)?;
     if !published.active {
         return not_found(None, &hash_id);
@@ -286,7 +281,6 @@ mod functest {
         assert_eq!(album.photos.items.len(), 0, "didn't remove photo");
     }
 
-    #[ignore]
     #[test]
     fn album_publish_workflow() {
         let db = test_db();
@@ -323,13 +317,11 @@ mod functest {
         let other_user_pub = user_published_albums(&db, &u2, &harsh).expect("album fetch ok");
         assert!(other_user_pub.is_empty());
 
-        let disabled = ToggleActive { active: false };
-        toggle_published_album(&db, &user, &harsh, published.hash.clone(), disabled).expect("toggled off");
+        toggle_published_album(&db, &user, &harsh, published.hash.clone(), false).expect("toggled off");
         get_published_photos(&db, &s3, &harsh, published.hash.clone(), Pagination::first())
             .expect_err("album not published anymore");
 
-        let enabled = ToggleActive { active: true };
-        toggle_published_album(&db, &user, &harsh, published.hash.clone(), enabled).expect("toggled back on");
+        toggle_published_album(&db, &user, &harsh, published.hash.clone(), true).expect("toggled back on");
         let album = get_published_photos(&db, &s3, &harsh, published.hash.clone(), Pagination::first())
             .expect("album re-published");
         assert_eq!(album.photos.items.len(), 1);

@@ -58,12 +58,12 @@ impl<'f> FromForm<'f> for Pagination {
         let mut max_key = None;
         let mut per_page = None;
 
-        for (key, value) in items {
+        for item in items {
             // TODO: right now this will ignore bad user-supplied parameters
             // would a bad request be more appropriate?
-            match key.as_str() {
-                "key" => max_key = value.parse::<i32>().ok(),
-                "page_size" => per_page = value.parse::<i64>().ok(),
+            match item.key.as_str() {
+                "key" => max_key = item.value.parse::<i32>().ok(),
+                "page_size" => per_page = item.value.parse::<i64>().ok(),
                 _ => { /* always allow extra params */ },
             }
         }
