@@ -160,6 +160,16 @@ fn me(user: User) -> Api<auth::UserResponse> {
     Ok(Json(auth::UserResponse::new(user)))
 }
 
+#[catch(401)]
+fn unauthorized() -> ApiError {
+    ApiError::unauthorized()
+}
+
+#[catch(404)]
+fn not_found() -> Api<()> {
+    ApiError::not_found(None, "Endpoint not found".to_string())
+}
+
 // Main entry that creates the web application, connects to the database and binds the web routes
 pub fn rocket() -> Rocket {
     dotenv::dotenv().ok(); // read from a .env file if one is present
@@ -172,6 +182,7 @@ pub fn rocket() -> Rocket {
         .attach(Template::fairing())
         .attach(https::ProductionHttpsRedirect {})
         .attach(hsts::sts_header())
+        .register(catchers![unauthorized, not_found])
         .mount("/", routes![admin, https::redirect_handler])
         .mount("/api", routes![
             login, logout, register, start_reset_password, reset_password, me,
