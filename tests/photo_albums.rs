@@ -34,6 +34,15 @@ fn photo_albums() {
     let email = String::from("photo@testing.com");
     let creds = json!({ "email": &email, "password": "ninja truck bar fight" });
 
+    // make sure the authenticated endpoints 401 json and not html
+    let mut res = post(&client, "/api/albums/1/publish", &json!({"foo": "bar"}), None);
+    let body = serde_json::from_str(&res.body_string().expect("missing body on login"))
+        .expect("401 body parsing failed");
+    match body {
+        Value::Object(_map) => (),
+        _ => assert!(false, "didn't get object back for 401 response"),
+    }
+
     // register a new user & log in
     let res = register(&creds);
     assert_eq!(res.status(), Status::Ok);
