@@ -2,9 +2,10 @@ use diesel::PgConnection;
 use diesel::dsl::count;
 use diesel::query_dsl::*;
 use diesel::result::Error;
+use serde_derive::Serialize;
 
-use s3::S3Access;
-use errors::ApiError;
+use crate::s3::S3Access;
+use crate::errors::ApiError;
 
 #[derive(Serialize)]
 pub struct AdminContext {
@@ -42,7 +43,7 @@ struct UserStats {
 }
 
 fn count_users(db: &PgConnection) -> Result<UserStats, Error> {
-    use db::schema::users::dsl::*;
+    use crate::db::schema::users::dsl::*;
     let total = users.select(count(id)).first(db)?;
     let subscribed = users.select(count(subscription_expires)).first(db)?;
     Ok(UserStats { total, subscribed })
@@ -55,7 +56,7 @@ struct PhotoStats {
 }
 
 fn count_photos(db: &PgConnection) -> Result<PhotoStats, Error> {
-    use db::schema::photos::dsl::*;
+    use crate::db::schema::photos::dsl::*;
     let created = photos.select(count(id)).first(db)?;
     let uploaded = photos.select(count(present)).first(db)?;
     Ok(PhotoStats { created, uploaded })

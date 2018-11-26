@@ -4,6 +4,7 @@ use rusoto_core::credential::{AwsCredentials, EnvironmentProvider};
 use rusoto_s3::{S3Client, PutObjectRequest,
                 DeleteObjectRequest, DeleteObjectOutput, DeleteObjectError};
 use rusoto_s3::util::PreSignedRequest;
+use serde_derive::{Serialize, Deserialize};
 
 pub struct S3Access {
     pub bucket: String,

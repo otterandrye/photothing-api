@@ -1,16 +1,16 @@
 use chrono::prelude::*;
 use harsh::Harsh;
 
-use db::{PgConnection, Pagination, Page};
-use db::user::User;
-use db::album::Album as DbAlbum;
-use db::album::AlbumMembership;
-use db::photo::Photo as DbPhoto;
-use db::photo::PhotoAttr;
-use db::publishing::PublishedAlbum;
-use errors::ApiError;
-use photos::Photo;
-use s3::S3Access;
+use crate::db::{PgConnection, Pagination, Page};
+use crate::db::user::User;
+use crate::db::album::Album as DbAlbum;
+use crate::db::album::AlbumMembership;
+use crate::db::photo::Photo as DbPhoto;
+use crate::db::photo::PhotoAttr;
+use crate::db::publishing::PublishedAlbum;
+use crate::errors::ApiError;
+use crate::photos::Photo;
+use crate::s3::S3Access;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -202,9 +202,7 @@ pub fn get_published_photos(db: &PgConnection, s3: &S3Access, harsh: &Harsh, has
 
 #[cfg(test)]
 mod functest {
-    use db::test_db;
-    use db::user::NewUser;
-    use db::photo::NewPhoto;
+    use crate::db::{test_db, user::NewUser, photo::NewPhoto};
     use harsh::HarshBuilder;
     use super::*;
 

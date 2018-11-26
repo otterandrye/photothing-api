@@ -5,6 +5,7 @@ use diesel::result::Error as DbError;
 use rocket::{Response, Request};
 use rocket::http::{ContentType, Status};
 use rocket::response::{Result as RocketResult, Responder};
+use serde_json::json;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]

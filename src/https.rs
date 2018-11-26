@@ -3,6 +3,7 @@ use rocket::config::Environment;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::fairing::AdHoc;
 use rocket::response::Redirect;
+use rocket::codegen::uri;
 
 /// This fairing redirects HTTP requests to HTTPS on heroku
 pub struct ProductionHttpsRedirect;

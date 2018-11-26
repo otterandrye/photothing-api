@@ -3,10 +3,10 @@ use rocket::Outcome;
 use rocket::http::{Cookie, Status};
 use rocket::request::{self, Request, FromRequest};
 
-pub use db::user::User;
+pub use crate::db::user::User;
 
 use super::{logout, USER_COOKIE, AUTH_HEADER, ADMIN_PREFIX};
-use db::DbConn;
+use crate::db::DbConn;
 
 // Check the private cookies or custom auth header on the request to see if there's a stored user
 // id. If there is, look up the user to make sure the user is still valid in the database. This

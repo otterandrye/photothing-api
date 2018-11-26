@@ -3,10 +3,11 @@ use diesel;
 use diesel::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
-use db::schema::published_albums;
+use diesel_derives::{belongs_to, Queryable, Identifiable, Associations};
 
-use db::user::User;
-use db::album::Album;
+use crate::db::schema::published_albums;
+use crate::db::user::User;
+use crate::db::album::Album;
 
 #[derive(Queryable, Associations, Identifiable)]
 #[belongs_to(User)]

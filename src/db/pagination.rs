@@ -3,6 +3,7 @@ use diesel::query_dsl::methods::LoadQuery;
 use diesel::query_builder::*;
 use diesel::pg::Pg;
 use diesel::sql_types::{BigInt, Integer};
+use serde_derive::{Serialize, Deserialize};
 
 use rocket::request::{FromForm, FormItems};
 

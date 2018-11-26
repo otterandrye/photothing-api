@@ -1,26 +1,24 @@
 use dotenv;
 use harsh::Harsh;
-use rocket::{ignite, Rocket, State};
-use rocket::http::Cookies;
-use rocket::request::Form;
+use rocket::{ignite, Rocket, State, http::Cookies, request::Form};
+use rocket_codegen::routes;
 use rocket_contrib::json::Json;
 use rocket_contrib::templates::Template;
-use serde_json::Value;
+use serde_json::{Value, json};
 
-use db::{DbConn, Pagination};
-use email::Emailer;
-use errors::ApiError;
-use s3::{S3Access, UploadRequest};
-use auth;
-use auth::guards::*;
-use admin;
-use albums;
-use config;
-use hsts;
-use https;
-use photos;
+use crate::db::{DbConn, Pagination};
+use crate::email::Emailer;
+use crate::errors::ApiError;
+use crate::s3::{S3Access, UploadRequest};
+use crate::auth;
+use crate::auth::guards::{User, Subscriber, Admin};
+use crate::albums;
+use crate::config;
+use crate::hsts;
+use crate::https;
+use crate::photos;
 
-pub use db::Page;
+pub use crate::db::Page;
 
 pub type Api<T> = Result<Json<T>, ApiError>;
 pub type FreeJson = Value;
@@ -151,7 +149,7 @@ fn toggle_published_album(db: DbConn, user: User, harsh: State<Harsh>, hash_id: 
 
 #[get("/admin")]
 fn admin(_admin: Admin, s3: State<S3Access>, db: DbConn) -> Result<Template, ApiError> {
-    let context = admin::fetch_dashboard(&s3.inner(), &db)?;
+    let context = create::admin::fetch_dashboard(&s3.inner(), &db)?;
     Ok(Template::render("admin", &context))
 }
 

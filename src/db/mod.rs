@@ -8,6 +8,8 @@ pub mod schema;
 pub use self::pagination::{Page, Pagination};
 pub use diesel::PgConnection;
 
+use rocket_contrib_codegen::database;
+
 ///! see: https://rocket.rs/guide/state/#databases
 #[database("photos")]
 pub struct DbConn(PgConnection);

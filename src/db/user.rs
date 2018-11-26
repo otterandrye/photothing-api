@@ -3,9 +3,10 @@ use chrono::{Duration, DateTime, NaiveDate};
 use diesel;
 use diesel::PgConnection;
 use diesel::prelude::*;
+use diesel_derives::{belongs_to, Queryable, Identifiable, Associations};
 
-use db::schema::{users, password_resets};
-use ::util::{HashedPassword, uuid};
+use crate::db::schema::{users, password_resets};
+use crate::util::{HashedPassword, uuid};
 
 #[derive(Queryable, Identifiable, Clone)]
 pub struct User {
@@ -48,14 +49,14 @@ pub struct MutableUser(User);
 
 impl MutableUser {
     pub fn edit_subscription(self, db: &PgConnection, expiration_date: Option<NaiveDate>) -> QueryResult<User> {
-        use db::schema::users::dsl::*;
+        use crate::db::schema::users::dsl::*;
         diesel::update(&self.0)
             .set(subscription_expires.eq(expiration_date))
             .get_result(db)
     }
 
     pub fn change_password(self, db: &PgConnection, pw: HashedPassword) -> QueryResult<User> {
-        use db::schema::users::dsl::*;
+        use crate::db::schema::users::dsl::*;
         diesel::update(&self.0)
             .set(password.eq(pw.0))
             .get_result(db)
@@ -116,7 +117,7 @@ pub struct PasswordReset {
 
 impl PasswordReset {
     pub fn by_uuid(db: &PgConnection, user: &MutableUser, given_uuid: &str) -> QueryResult<Option<PasswordReset>> {
-        use db::schema::password_resets::dsl::*;
+        use crate::db::schema::password_resets::dsl::*;
         let reset = PasswordReset::belonging_to(&user.0)
             .for_update() // always lock the pw reset row
             .filter(uuid.eq(given_uuid))
@@ -134,8 +135,8 @@ impl PasswordReset {
     }
 
     pub fn create(user: &User, db: &PgConnection) -> QueryResult<PasswordReset> {
-        use db::schema::password_resets::dsl::*;
-        let reset = NewPasswordReset { user_id: user.id, uuid: ::util::uuid().0 };
+        use crate::db::schema::password_resets::dsl::*;
+        let reset = NewPasswordReset { user_id: user.id, uuid: crate::util::uuid().0 };
         let created = diesel::insert_into(password_resets)
             .values(&reset)
             .get_result(db)?;

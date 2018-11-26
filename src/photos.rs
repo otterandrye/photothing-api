@@ -1,13 +1,14 @@
 use chrono::prelude::*;
 use chrono::serde::ts_seconds;
 use diesel::Connection;
+use serde_derive::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-use db::user::User;
-use db::{PgConnection, Pagination, Page};
-use db::photo::{NewPhotoAttr, NewPhoto, Photo as DbPhoto, PhotoAttr, AttributeKeyValue};
-use errors::ApiError;
-use s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
+use crate::db::user::User;
+use crate::db::{PgConnection, Pagination, Page};
+use crate::db::photo::{NewPhotoAttr, NewPhoto, Photo as DbPhoto, PhotoAttr, AttributeKeyValue};
+use crate::errors::ApiError;
+use crate::s3::{sign_upload, S3Access, UploadRequest, UploadResponse};
 
 // User-facing photo structure
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -73,9 +74,9 @@ pub fn user_photos(user: &User, db: &PgConnection, s3: &S3Access, pagination: Pa
 mod test {
     use dotenv;
 
-    use db::{PgConnection, test_db};
-    use db::user::NewUser;
-    use s3::UploadRequest;
+    use crate::db::{PgConnection, test_db};
+    use crate::db::user::NewUser;
+    use crate::s3::UploadRequest;
     use super::*;
 
     fn setup() -> (User, S3Access, PgConnection) {

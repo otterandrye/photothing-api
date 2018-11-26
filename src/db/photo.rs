@@ -1,13 +1,12 @@
 use chrono::prelude::*;
-use diesel;
-use diesel::PgConnection;
-use diesel::result::Error;
+use diesel::{self, PgConnection, result::Error};
 use diesel::prelude::*;
+use diesel_derives::{belongs_to, Queryable, Identifiable, Associations};
 
-use db::pagination::{Paginate, Pagination, Page};
-use db::schema::{photos, photo_attrs};
-use db::user::User;
-use ::util::uuid;
+use crate::db::pagination::{Paginate, Pagination, Page};
+use crate::db::schema::{photos, photo_attrs};
+use crate::db::user::User;
+use crate::util::uuid;
 
 // Main Photo object, keeps track of whether the file exists on S3 and who uploaded it
 #[derive(Queryable, Associations, Identifiable)]
@@ -78,10 +77,10 @@ pub struct AttributeKeyValue {
     value: String,
 }
 
-static ERR_TAG_LEN_30: &'static str = "TAG_TOO_LONG_MAX_30";
-static ERR_TAG_EMPTY: &'static str = "TAG_EMPTY";
-static ERR_VALUE_LEN_100: &'static str = "VALUE_TOO_LONG_MAX_100";
-static ERR_VALUE_EMPTY: &'static str = "VALUE_EMPTY";
+static ERR_TAG_LEN_30: &str = "TAG_TOO_LONG_MAX_30";
+static ERR_TAG_EMPTY: &str = "TAG_EMPTY";
+static ERR_VALUE_LEN_100: &str = "VALUE_TOO_LONG_MAX_100";
+static ERR_VALUE_EMPTY: &str = "VALUE_EMPTY";
 
 impl AttributeKeyValue {
     // This function verifies the database constraints on the attributes table for you

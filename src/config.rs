@@ -1,10 +1,9 @@
-use email::{init_emailer, dummy_emailer};
 use harsh::HarshBuilder;
-use rocket::fairing::{AdHoc, Fairing};
-use rocket::http::Method;
+use rocket::{http::Method, fairing::{AdHoc, Fairing}};
 use rocket_cors::{Cors, AllowedOrigins, AllowedHeaders};
 
-use s3::S3Access;
+use crate::email::{init_emailer, dummy_emailer};
+use crate::s3::S3Access;
 
 ///! stuff that needs configuration from the environment to work properly
 

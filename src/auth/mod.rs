@@ -1,15 +1,16 @@
 use bcrypt::verify;
 use mailchecker;
 use rocket::http::{Cookie, Cookies};
+use serde_derive::{Serialize, Deserialize};
 use url::form_urlencoded;
 
 use zxcvbn::zxcvbn as check_password;
 
-use db::PgConnection;
-use db::user::{User, NewUser, PasswordReset};
-use email::Emailer;
-use errors::ApiError;
-use util::hash_password;
+use crate::db::PgConnection;
+use crate::db::user::{User, NewUser, PasswordReset};
+use crate::email::Emailer;
+use crate::errors::ApiError;
+use crate::util::hash_password;
 
 pub mod guards;
 

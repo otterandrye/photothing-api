@@ -3,11 +3,14 @@ use diesel;
 use diesel::PgConnection;
 use diesel::result::Error;
 use diesel::prelude::*;
+use diesel_derives::{belongs_to, table_name, Queryable, Identifiable, Associations};
 
-use db::pagination::{Paginate, Pagination, Page};
-use db::user::User;
-use db::photo::{Photo, PhotoAttr};
-use db::schema::{photo_albums, album_membership};
+use crate::db::{
+    pagination::{Paginate, Pagination, Page},
+    user::User,
+    photo::{Photo, PhotoAttr},
+    schema::{photo_albums, album_membership}
+};
 
 #[derive(Queryable, Associations, Identifiable)]
 #[belongs_to(User)]

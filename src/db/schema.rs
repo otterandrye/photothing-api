@@ -1,3 +1,5 @@
+use diesel::macros::{table, joinable, allow_tables_to_appear_in_same_query};
+
 table! {
     album_membership (photo_id, album_id) {
         photo_id -> Int4,
