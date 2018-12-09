@@ -1,4 +1,4 @@
-#![feature(plugin, custom_derive, proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro)]
 #![allow(proc_macro_derive_resolution_fallback)] // diesel warning, https://github.com/rust-lang/rust/issues/50504
 
 extern crate bcrypt;
