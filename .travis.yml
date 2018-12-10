@@ -19,10 +19,11 @@ before_script:
   - cargo install diesel_cli --no-default-features --features postgres || echo "already
     installed"
   - diesel migration run
+  - dpkg --list | grep libpq
 
 script:
-  - cargo test
-  - cargo test -- --ignored
+  - RUSTFLAGS="-Z sanitizer=address" cargo test --target x86_64-unknown-linux-gnu
+  - RUSTFLAGS="-Z sanitizer=address" cargo test --target x86_64-unknown-linux-gnu -- --ignored
 
 after_script:
   - sudo -u postgres psql -c 'drop database travis_ci_test;' -U postgres
