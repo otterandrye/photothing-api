@@ -1,9 +1,10 @@
 use futures::Future;
+use std::time::Duration;
 use rusoto_core::{ProvideAwsCredentials, Region};
 use rusoto_core::credential::{AwsCredentials, EnvironmentProvider};
 use rusoto_s3::{S3Client, PutObjectRequest,
                 DeleteObjectRequest, DeleteObjectOutput, DeleteObjectError};
-use rusoto_s3::util::PreSignedRequest;
+use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
 
 pub struct S3Access {
     pub bucket: String,
@@ -56,13 +57,14 @@ fn get_destination(s3: &S3Access, directory: &str, id: &str) -> String {
 
 pub fn sign_upload(s3: &S3Access, directory: &str, req: UploadRequest, id: &str) -> UploadResponse {
     let destination = get_destination(s3, directory, id);
+    let options = PreSignedRequestOption { expires_in: Duration::from_secs(60 * 30) };
     let put_req = PutObjectRequest {
         bucket: s3.bucket.clone(),
         key: destination.clone(),
         content_type: Some(req.file_type.clone()),
         ..Default::default()
     };
-    let url = put_req.get_presigned_url(&s3.region, &s3.creds);
+    let url = put_req.get_presigned_url(&s3.region, &s3.creds, &options);
     let get_url = s3.cdn_url_of_destination(&destination);
 
     UploadResponse {
@@ -124,7 +126,7 @@ mod test {
             .body("some content")
             .send()
             .expect("request failed");
-        assert_eq!(res.status(), StatusCode::Forbidden, "unathorized request didn't fail");
+        assert_eq!(res.status(), StatusCode::FORBIDDEN, "unathorized request didn't fail");
     }
 
     #[test]
@@ -161,12 +163,12 @@ mod test {
             .body(body.clone())
             .send()
             .expect("request failed");
-        assert_eq!(res.status(), StatusCode::Ok, "upload request got 200 status");
+        assert_eq!(res.status(), StatusCode::OK, "upload request got 200 status");
 
         println!("CDN url: {}", &response.get_url);
         // and that we can fetch it back using the get_url
         let mut get = client.get(&response.get_url).send().expect("CDN request failed");
-        assert_eq!(get.status(), StatusCode::Ok, "200 getting uploaded content from CDN");
+        assert_eq!(get.status(), StatusCode::OK, "200 getting uploaded content from CDN");
         assert_eq!(get.text().expect("no text"), body, "got correct content back");
 
         // now delete the file
