@@ -209,6 +209,7 @@ mod functest {
     use super::*;
 
     #[test]
+    #[ignore]
     fn url_friendliness() {
         let harsh = HarshBuilder::new().salt("foo").init().expect("harsh init failed (harsh)");
 
@@ -225,6 +226,7 @@ mod functest {
     }
 
     #[test]
+    #[ignore]
     #[should_panic(expected = "attempt to multiply with overflow")]
     fn document_harsher_bug() {
         // kind of scary that Harsh panics here, but I don't think a malicious user could get up
@@ -234,6 +236,7 @@ mod functest {
     }
 
     #[test]
+    #[ignore]
     fn album_crud() {
         let db = test_db();
         let user = NewUser::fake("album_crud@gmail.com").insert(&db)
@@ -281,6 +284,7 @@ mod functest {
         assert_eq!(album.photos.items.len(), 0, "didn't remove photo");
     }
 
+    #[ignore]
     #[test]
     fn album_publish_workflow() {
         let db = test_db();

@@ -170,6 +170,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn page_map_items() {
         let pg = Page { items: vec![1, 2, 3], key: Some(11), next_key: Some(55), remaining: 1};
         let mapped = pg.clone()
@@ -181,6 +182,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn pagination_from_request() {
         let mut form = FormItems::from("key=3&page_size=21");
         let parsed = Pagination::from_form(&mut form, false)
@@ -190,6 +192,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn pagination_defaults() {
         let mut form = FormItems::from("?wrong=foo&args=only");
         let parsed = Pagination::from_form(&mut form, false)
@@ -199,6 +202,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn pagination_wrong_types() {
         let mut form = FormItems::from("key=beep&page_size=bop");
         let parsed = Pagination::from_form(&mut form, false)

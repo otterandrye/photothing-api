@@ -144,6 +144,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn new_photo_attr() {
         let photo = photo();
         match AttributeKeyValue::new("FOO", "BAR") {
@@ -158,6 +159,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn attr_db_constraints() {
         assert_eq!(AttributeKeyValue::new("", "foo"), Err(ERR_TAG_EMPTY));
         assert_eq!(AttributeKeyValue::new("asdflkjghasdfljasflkjaslfdjaslfdjalsdfj", "foo"),

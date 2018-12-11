@@ -26,6 +26,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn password_hashing() {
         // letters, numbers, special chars & extended ascii
         let pw = "åî>@%åÄSt»Æ·wj³´m~ðjC½µæGjq6?ï";
@@ -36,6 +37,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn gen_uuids() {
         let v4 = uuid();
         assert_eq!(v4.0.find("-"), None);

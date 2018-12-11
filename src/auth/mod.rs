@@ -190,6 +190,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn user_form_validation() {
         let short_pw = UserLogin { email: String::from("a@g.com"), password: String::from("hi") };
         assert_eq!(short_pw.validate(), Err(PW_SHORT_ERROR));
@@ -205,6 +206,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn pw_reset_url() {
         let reset = PasswordReset::fake("foo");
         let url = password_reset_url("APP_HOST", "nathan@chemist.com", &reset);

@@ -72,6 +72,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn dummy_emailer() {
         let mut emailer = EmailClient::new();
         let sent = emailer.send_message("f@b.com", "hi");
